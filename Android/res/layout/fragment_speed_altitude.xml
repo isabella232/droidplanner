@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="10dip"
+    >
+    <LinearLayout
+        android:id="@+id/layout_wheels"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        >
+        <org.droidplanner.android.widgets.spinnerWheel.CardWheelHorizontalView
+            android:id="@+id/pick_takeoff_altitude"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:text="@string/lbl_takeoff_altitude"
+            style="@style/missionItemDetailCard"
+            />
+
+        <org.droidplanner.android.widgets.spinnerWheel.CardWheelHorizontalView
+            android:id="@+id/pick_drop_altitude"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:text="@string/lbl_drop_altitude"
+            style="@style/missionItemDetailCard"
+            />
+
+        <org.droidplanner.android.widgets.spinnerWheel.CardWheelHorizontalView
+            android:id="@+id/pick_drag_speed"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:text="@string/lbl_drag_speed"
+            style="@style/missionItemDetailCard"
+            />
+
+        <org.droidplanner.android.widgets.spinnerWheel.CardWheelHorizontalView
+            android:id="@+id/pick_return_speed"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:text="@string/lbl_return_speed"
+            style="@style/missionItemDetailCard"
+            />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btn_cancel_flight"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="6dip"
+        android:text="@string/btn_cancel_flight"
+        android:visibility="gone"
+        style="@style/BigRedButton.Bold"
+        />
+</LinearLayout>

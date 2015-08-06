@@ -483,5 +483,14 @@
         <item name="android:textColor">@android:color/secondary_text_light</item>
     </style>
 
+    <style name="BigRedButton">
+        <item name="android:background">@drawable/button_red_drawable</item>
+        <item name="android:textColor">@android:color/white</item>
+    </style>
+
+    <style name="BigRedButton.Bold">
+        <item name="android:textStyle">bold</item>
+    </style>
+
 </resources>
 

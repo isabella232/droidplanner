@@ -62,6 +62,20 @@
             android:layout_alignEnd="@+id/actionbar_container"
             />
 
+        <FrameLayout
+            android:id="@+id/layout_speed_alt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginLeft="20dip"
+            android:layout_marginBottom="20dip"
+            android:orientation="vertical"
+            android:background="#3000"
+            android:gravity="center"
+            android:minWidth="320dip"
+            />
+
     </RelativeLayout>
     <!-- Sliding layout -->
     <LinearLayout

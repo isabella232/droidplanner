@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Original -->
+    <!--<string name="map_key">AIzaSyCN2XBLjIAD7NzTZJDN7BrHanE08PGL5eE</string>-->
+
+    <!-- Aerokontiki package name -->
+    <string name="map_key">AIzaSyALRs0QnPhhZ0-vXe_irihYFj_iXLyY7oA</string>
+
+    <!-- DroidPlanner package name -->
+    <!--<string name="map_key">AIzaSyD1_653pxU9nM-hY79Cwic1lshe3slh_dk</string>-->
+</resources>

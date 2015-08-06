@@ -16,27 +16,39 @@ import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.ImageButton;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.o3dr.android.client.Drone;
+import com.o3dr.services.android.lib.coordinate.LatLong;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEventExtra;
 import com.o3dr.services.android.lib.drone.attribute.error.ErrorType;
+import com.o3dr.services.android.lib.drone.property.VehicleMode;
 import com.sothree.slidinguppanel.SlidingUpPanelLayout;
 
+import org.droidplanner.android.DroidPlannerApp;
 import org.droidplanner.android.R;
+import org.droidplanner.android.activities.interfaces.OnEditorInteraction;
+import org.droidplanner.android.aerokontiki.AeroKontiki;
 import org.droidplanner.android.fragments.DroneMap;
-import org.droidplanner.android.fragments.control.FlightControlManagerFragment;
+import org.droidplanner.android.fragments.EditorMapFragment;
 import org.droidplanner.android.fragments.FlightMapFragment;
 import org.droidplanner.android.fragments.TelemetryFragment;
+import org.droidplanner.android.fragments.control.FlightControlManagerFragment;
+import org.droidplanner.android.fragments.helpers.GestureMapFragment;
 import org.droidplanner.android.fragments.mode.FlightModePanel;
+import org.droidplanner.android.proxy.mission.MissionProxy;
+import org.droidplanner.android.proxy.mission.MissionSelection;
+import org.droidplanner.android.proxy.mission.item.MissionItemProxy;
+import org.droidplanner.android.proxy.mission.item.fragments.SpeedAndAltitudeFragment;
 import org.droidplanner.android.utils.prefs.AutoPanMode;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class FlightActivity extends DrawerNavigationUI {
+public class FlightActivity extends DrawerNavigationUI
+    implements OnEditorInteraction, MissionSelection.OnSelectionUpdateListener {
 
     private static final String TAG = FlightActivity.class.getSimpleName();
     private static final int GOOGLE_PLAY_SERVICES_REQUEST_CODE = 101;
@@ -59,6 +71,7 @@ public class FlightActivity extends DrawerNavigationUI {
         eventFilter.addAction(AttributeEvent.STATE_UPDATED);
         eventFilter.addAction(AttributeEvent.FOLLOW_START);
         eventFilter.addAction(AttributeEvent.MISSION_DRONIE_CREATED);
+        eventFilter.addAction(AeroKontiki.EVENT_DISARMED);
     }
 
     private final BroadcastReceiver eventReceiver = new BroadcastReceiver() {
@@ -91,6 +104,11 @@ public class FlightActivity extends DrawerNavigationUI {
                     float dronieBearing = intent.getFloatExtra(AttributeEventExtra.EXTRA_MISSION_DRONIE_BEARING, -1);
                     if (dronieBearing != -1)
                         updateMapBearing(dronieBearing);
+                    break;
+
+                case AeroKontiki.EVENT_DISARMED:
+                    final Drone drone = DroidPlannerApp.get().getDrone();
+                    drone.changeVehicleMode(VehicleMode.COPTER_LOITER);
                     break;
             }
         }
@@ -137,15 +155,47 @@ public class FlightActivity extends DrawerNavigationUI {
         }
     };
 
+    private final SpeedAndAltitudeFragment.Listener mSpeedAltFragmentListener = new SpeedAndAltitudeFragment.Listener() {
+        @Override
+        public void onMissionCanceled() {
+            AeroKontiki.onMissionCanceled(FlightActivity.this, handler);
+        }
+
+        @Override
+        public void onDragSpeedSet(double speed) {
+            Log.v(TAG, "onSpeedSet(): speed=" + speed);
+            DroidPlannerApp.get().getAppPreferences().setDefaultDragSpeed((int) speed);
+        }
+
+        @Override
+        public void onTakeoffAltitudeSet(double alt) {
+            DroidPlannerApp.get().getAppPreferences().setDefaultTakeoffAltitude((int)alt);
+        }
+
+        @Override
+        public void onDropAltitudeSet(double alt) {
+            Log.v(TAG, "onAltitudeSet(): alt=" + alt);
+            DroidPlannerApp.get().getAppPreferences().setDefaultDragAltitude((int) alt);
+        }
+
+        @Override
+        public void onReturnSpeedSet(double speed) {
+            DroidPlannerApp.get().getAppPreferences().setDefaultReturnSpeed((int) speed);
+        }
+    };
+
     private final Handler handler = new Handler();
 
     private FragmentManager fragmentManager;
 
     private TextView warningView;
 
-    private FlightMapFragment mapFragment;
+    private GestureMapFragment mapFragment;
+    private SpeedAndAltitudeFragment speedAndAltitudeFragment;
     private FlightControlManagerFragment flightActions;
     private TelemetryFragment telemetryFragment;
+
+    private MissionProxy missionProxy;
 
     private SlidingUpPanelLayout mSlidingPanel;
     private View mFlightActionsView;
@@ -201,6 +251,7 @@ public class FlightActivity extends DrawerNavigationUI {
         warningView = (TextView) findViewById(R.id.failsafeTextView);
 
         setupMapFragment();
+        setupSpeedAndAltFragment();
 
         mLocationButtonsContainer = findViewById(R.id.location_button_container);
         mGoToMyLocation = (ImageButton) findViewById(R.id.my_location_button);
@@ -222,7 +273,7 @@ public class FlightActivity extends DrawerNavigationUI {
             @Override
             public void onClick(View v) {
                 if (mapFragment != null) {
-                    mapFragment.goToMyLocation();
+                    mapFragment.getMapFragment().goToMyLocation();
                     updateMapLocationButtons(AutoPanMode.DISABLED);
                 }
             }
@@ -231,7 +282,7 @@ public class FlightActivity extends DrawerNavigationUI {
             @Override
             public boolean onLongClick(View v) {
                 if (mapFragment != null) {
-                    mapFragment.goToMyLocation();
+                    mapFragment.getMapFragment().goToMyLocation();
                     updateMapLocationButtons(AutoPanMode.USER);
                     return true;
                 }
@@ -243,7 +294,7 @@ public class FlightActivity extends DrawerNavigationUI {
             @Override
             public void onClick(View v) {
                 if (mapFragment != null) {
-                    mapFragment.goToDroneLocation();
+                    mapFragment.getMapFragment().goToDroneLocation();
                     updateMapLocationButtons(AutoPanMode.DISABLED);
                 }
             }
@@ -252,7 +303,7 @@ public class FlightActivity extends DrawerNavigationUI {
             @Override
             public boolean onLongClick(View v) {
                 if (mapFragment != null) {
-                    mapFragment.goToDroneLocation();
+                    mapFragment.getMapFragment().goToDroneLocation();
                     updateMapLocationButtons(AutoPanMode.DRONE);
                     return true;
                 }
@@ -320,6 +371,13 @@ public class FlightActivity extends DrawerNavigationUI {
     @Override
     public void onApiConnected() {
         super.onApiConnected();
+
+        missionProxy = dpApp.getMissionProxy();
+        if (missionProxy != null) {
+            missionProxy.selection.addSelectionUpdateListener(this);
+//            itemDetailToggle.setVisibility(missionProxy.selection.getSelected().isEmpty() ? View.GONE : View.VISIBLE);
+        }
+
         enableSlidingUpPanel(dpApp.getDrone());
         getBroadcastManager().registerReceiver(eventReceiver, eventFilter);
     }
@@ -328,6 +386,10 @@ public class FlightActivity extends DrawerNavigationUI {
     public void onApiDisconnected() {
         super.onApiDisconnected();
         enableSlidingUpPanel(dpApp.getDrone());
+
+        if (missionProxy != null)
+            missionProxy.selection.removeSelectionUpdateListener(this);
+
         getBroadcastManager().unregisterReceiver(eventReceiver);
     }
 
@@ -346,7 +408,7 @@ public class FlightActivity extends DrawerNavigationUI {
         mGoToDroneLocation.setActivated(false);
 
         if (mapFragment != null) {
-            mapFragment.setAutoPanMode(mode);
+            mapFragment.getMapFragment().setAutoPanMode(mode);
         }
 
         switch (mode) {
@@ -364,7 +426,7 @@ public class FlightActivity extends DrawerNavigationUI {
 
     public void updateMapBearing(float bearing) {
         if (mapFragment != null)
-            mapFragment.updateMapBearing(bearing);
+            mapFragment.getMapFragment().updateMapBearing(bearing);
     }
 
     /**
@@ -402,24 +464,37 @@ public class FlightActivity extends DrawerNavigationUI {
      */
     private void setupMapFragment() {
         if (mapFragment == null && isGooglePlayServicesValid(true)) {
-            mapFragment = (FlightMapFragment) fragmentManager.findFragmentById(R.id.flight_map_fragment);
-            if (mapFragment == null) {
-                mapFragment = new FlightMapFragment();
+            mapFragment = ((GestureMapFragment) fragmentManager.findFragmentById(R.id.editor_map_fragment));
+            if(mapFragment == null) {
+                mapFragment = new GestureMapFragment();
                 fragmentManager.beginTransaction().add(R.id.flight_map_fragment, mapFragment).commit();
             }
         }
     }
 
+    private void setupSpeedAndAltFragment() {
+        if(speedAndAltitudeFragment == null) {
+            speedAndAltitudeFragment = (SpeedAndAltitudeFragment)fragmentManager.findFragmentById(R.id.layout_speed_alt);
+
+            if(speedAndAltitudeFragment == null) {
+                speedAndAltitudeFragment = new SpeedAndAltitudeFragment();
+                fragmentManager.beginTransaction().add(R.id.layout_speed_alt, speedAndAltitudeFragment).commit();
+            }
+
+            speedAndAltitudeFragment.setListener(mSpeedAltFragmentListener);
+        }
+    }
+
     public void setGuidedClickListener(FlightMapFragment.OnGuidedClickListener listener){
-        mapFragment.setGuidedClickListener(listener);
+//        mapFragment.setGuidedClickListener(listener);
     }
 
     public void addMapMarkerProvider(DroneMap.MapMarkerProvider provider){
-        mapFragment.addMapMarkerProvider(provider);
+        mapFragment.getMapFragment().addMapMarkerProvider(provider);
     }
 
     public void removeMapMarkerProvider(DroneMap.MapMarkerProvider provider){
-        mapFragment.removeMapMarkerProvider(provider);
+        mapFragment.getMapFragment().removeMapMarkerProvider(provider);
     }
 
     @Override
@@ -499,6 +574,41 @@ public class FlightActivity extends DrawerNavigationUI {
             warningView.setText(errorLabel);
             warningView.setVisibility(View.VISIBLE);
             handler.postDelayed(hideWarningView, WARNING_VIEW_DISPLAY_TIMEOUT);
+        }
+    }
+
+    @Override
+    public void onItemClick(MissionItemProxy item, boolean zoomToFit) {
+        Log.v(TAG, "onItemClick()");
+//        if (missionProxy == null) return;
+//
+//        EditorToolsFragment.EditorToolsImpl toolImpl = getToolImpl();
+//        toolImpl.onListItemClick(item);
+//
+//        if (zoomToFit) {
+//            zoomToFitSelected();
+//        }
+    }
+
+    @Override
+    public void onMapClick(LatLong coord) {
+        Log.v(TAG, "onMapClick(): coord=" + coord);
+//        EditorToolsFragment.EditorToolsImpl toolImpl = getToolImpl();
+//        toolImpl.onMapClick(point);
+    }
+
+    @Override
+    public void onListVisibilityChanged() {
+        // Nothing in EditorActivity
+    }
+
+    @Override
+    public void onSelectionUpdate(List<MissionItemProxy> selected) {
+        Log.v(TAG, "onSelectionUpdate(): selected.size=" + selected.size());
+
+        final EditorMapFragment editor = mapFragment.getMapFragment();
+        if (editor != null) {
+            editor.postUpdate();
         }
     }
 }

@@ -10,9 +10,7 @@ import android.os.Handler;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.TextToSpeech.OnInitListener;
 import android.support.v4.content.LocalBroadcastManager;
-import android.text.TextUtils;
 import android.util.Log;
-import android.util.SparseBooleanArray;
 import android.widget.Toast;
 
 import com.o3dr.android.client.Drone;
@@ -28,7 +26,7 @@ import com.o3dr.services.android.lib.drone.property.Speed;
 import com.o3dr.services.android.lib.drone.property.State;
 import com.o3dr.services.android.lib.drone.property.VehicleMode;
 
-import org.droidplanner.android.R;
+import org.droidplanner.android.aerokontiki.AeroKontiki;
 import org.droidplanner.android.fragments.SettingsFragment;
 import org.droidplanner.android.utils.prefs.DroidPlannerPrefs;
 
@@ -37,7 +35,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -82,6 +79,7 @@ public class TTSNotificationProvider implements OnInitListener,
         eventFilter.addAction(AttributeEvent.ALTITUDE_UPDATED);
         eventFilter.addAction(AttributeEvent.SIGNAL_WEAK);
         eventFilter.addAction(AttributeEvent.WARNING_NO_GPS);
+        eventFilter.addAction(AeroKontiki.EVENT_SPEAK);
     }
 
     private final BroadcastReceiver eventReceiver = new BroadcastReceiver() {
@@ -175,7 +173,14 @@ public class TTSNotificationProvider implements OnInitListener,
                 case AttributeEvent.WARNING_NO_GPS:
                     speak("Error, no gps lock yet");
                     break;
-            }
+				case AeroKontiki.EVENT_SPEAK: {
+					final String data = intent.getStringExtra(AeroKontiki.EXTRA_DATA);
+					if(data != null) {
+						speak(data);
+					}
+					break;
+				}
+			}
         }
     };
 

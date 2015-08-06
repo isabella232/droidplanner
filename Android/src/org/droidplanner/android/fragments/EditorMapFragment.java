@@ -1,14 +1,5 @@
 package org.droidplanner.android.fragments;
 
-import java.util.List;
-
-import org.droidplanner.android.activities.interfaces.OnEditorInteraction;
-import org.droidplanner.android.maps.DPMap;
-import org.droidplanner.android.maps.MarkerInfo;
-import org.droidplanner.android.proxy.mission.item.markers.MissionItemMarkerInfo;
-import org.droidplanner.android.proxy.mission.item.markers.PolygonMarkerInfo;
-import org.droidplanner.android.utils.prefs.AutoPanMode;
-
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -21,8 +12,19 @@ import com.o3dr.services.android.lib.drone.attribute.AttributeType;
 import com.o3dr.services.android.lib.drone.mission.item.MissionItem;
 import com.o3dr.services.android.lib.drone.property.Home;
 
+import org.droidplanner.android.activities.interfaces.OnEditorInteraction;
+import org.droidplanner.android.maps.DPMap;
+import org.droidplanner.android.maps.MarkerInfo;
+import org.droidplanner.android.proxy.mission.item.markers.MissionItemMarkerInfo;
+import org.droidplanner.android.proxy.mission.item.markers.PolygonMarkerInfo;
+import org.droidplanner.android.utils.prefs.AutoPanMode;
+
+import java.util.List;
+
 public class EditorMapFragment extends DroneMap implements DPMap.OnMapLongClickListener,
 		DPMap.OnMarkerDragListener, DPMap.OnMapClickListener, DPMap.OnMarkerClickListener {
+
+	static final String TAG = EditorMapFragment.class.getSimpleName();
 
 	private OnEditorInteraction editorListener;
 

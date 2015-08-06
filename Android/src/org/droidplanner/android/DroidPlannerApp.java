@@ -5,6 +5,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.content.LocalBroadcastManager;
@@ -37,6 +39,10 @@ import java.util.List;
 import timber.log.Timber;
 
 public class DroidPlannerApp extends Application implements DroneListener, TowerListener {
+
+    private static DroidPlannerApp sInstance;
+
+    public static final DroidPlannerApp get() { return sInstance; }
 
     private static final long DELAY_TO_DISCONNECTION = 1000l; // ms
 
@@ -74,6 +80,11 @@ public class DroidPlannerApp extends Application implements DroneListener, Tower
             }
         }
     };
+
+    public DroidPlannerApp() {
+        super();
+        sInstance = this;
+    }
 
     @Override
     public void onTowerConnected() {
@@ -359,5 +370,11 @@ public class DroidPlannerApp extends Application implements DroneListener, Tower
 
         if (!TextUtils.isEmpty(errorMsg))
             Log.e(TAG, errorMsg);
+    }
+
+    public Location getLastKnownLocation() {
+        LocationManager m = (LocationManager)getSystemService(LOCATION_SERVICE);
+        Location last = m.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        return last;
     }
 }

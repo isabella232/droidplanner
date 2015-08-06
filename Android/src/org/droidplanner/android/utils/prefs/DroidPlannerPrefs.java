@@ -8,7 +8,6 @@ import android.text.TextUtils;
 import com.o3dr.services.android.lib.drone.connection.ConnectionType;
 
 import org.droidplanner.android.maps.providers.DPMapProvider;
-import org.droidplanner.android.maps.providers.MapProviderPreferences;
 import org.droidplanner.android.utils.unit.systems.UnitSystem;
 
 import java.util.HashMap;
@@ -152,6 +151,19 @@ public class DroidPlannerPrefs {
 
 	public static final String PREF_TTS_PERIODIC_AIRSPEED = "tts_periodic_airspeed";
 	private static final boolean DEFAULT_TTS_PERIODIC_AIRSPEED = true;
+
+	// Kontiki
+	public static final String PREF_TO_ALTITUDE = "k_takeoff_altitude";
+	public static final int DEFAULT_TO_ALTITUDE = 20;
+
+	public static final String PREF_DRAG_ALTITUDE = "flight_altitude";
+	public static final int DEFAULT_DRAG_ALTITUDE = 20; // meters
+
+	public static final String PREF_DRAG_SPEED = "flight_speed";
+	public static final int DEFAULT_DRAG_SPEED = 5; // meters/second
+
+	public static final String PREF_RETURN_SPEED = "return_speed";
+	public static final int DEFAULT_RETURN_SPEED = 10;
 
 	// Public for legacy usage
 	public SharedPreferences prefs;
@@ -463,5 +475,34 @@ public class DroidPlannerPrefs {
 
 	public boolean isTtsEnabled() {
 		return prefs.getBoolean(PREF_IS_TTS_ENABLED, DEFAULT_TTS_ENABLED);
+	}
+
+	// Kontiki
+	public int getDefaultDragAltitude() {
+		return prefs.getInt(PREF_DRAG_ALTITUDE, DEFAULT_DRAG_ALTITUDE);
+	}
+
+	public void setDefaultDragAltitude(int value) {
+		prefs.edit().putInt(PREF_DRAG_ALTITUDE, value).apply();
+	}
+
+	public int getDefaultDragSpeed() {
+		return prefs.getInt(PREF_DRAG_SPEED, DEFAULT_DRAG_SPEED);
+	}
+
+	public void setDefaultDragSpeed(int value) { prefs.edit().putInt(PREF_DRAG_SPEED, value).apply(); }
+
+	public int getDefaultReturnSpeed() {
+		return prefs.getInt(PREF_RETURN_SPEED, DEFAULT_RETURN_SPEED);
+	}
+
+	public void setDefaultReturnSpeed(int speed) {
+		prefs.edit().putInt(PREF_RETURN_SPEED, speed).apply();
+	}
+
+	public int getDefaultTakeoffAltitude() { return prefs.getInt(PREF_TO_ALTITUDE, DEFAULT_TO_ALTITUDE); }
+
+	public void setDefaultTakeoffAltitude(int alt) {
+		prefs.edit().putInt(PREF_TO_ALTITUDE, alt).apply();
 	}
 }

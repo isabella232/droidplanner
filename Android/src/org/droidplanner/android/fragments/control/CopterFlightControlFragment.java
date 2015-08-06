@@ -4,8 +4,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,24 +16,28 @@ import android.widget.Toast;
 
 import com.google.android.gms.analytics.HitBuilders;
 import com.o3dr.android.client.Drone;
+import com.o3dr.android.client.apis.drone.ExperimentalApi;
+import com.o3dr.services.android.lib.coordinate.LatLong;
+import com.o3dr.services.android.lib.coordinate.LatLongAlt;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEventExtra;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
+import com.o3dr.services.android.lib.drone.mission.Mission;
+import com.o3dr.services.android.lib.drone.mission.item.spatial.Waypoint;
+import com.o3dr.services.android.lib.drone.property.Gps;
 import com.o3dr.services.android.lib.drone.property.GuidedState;
 import com.o3dr.services.android.lib.drone.property.State;
 import com.o3dr.services.android.lib.drone.property.VehicleMode;
 import com.o3dr.services.android.lib.gcs.follow.FollowState;
-import com.o3dr.services.android.lib.gcs.follow.FollowType;
 
+import org.droidplanner.android.DroidPlannerApp;
 import org.droidplanner.android.R;
 import org.droidplanner.android.activities.FlightActivity;
 import org.droidplanner.android.activities.helpers.SuperUI;
+import org.droidplanner.android.aerokontiki.AeroKontiki;
 import org.droidplanner.android.dialogs.SlideToUnlockDialog;
 import org.droidplanner.android.dialogs.SupportYesNoDialog;
 import org.droidplanner.android.dialogs.SupportYesNoWithPrefsDialog;
-import org.droidplanner.android.dialogs.YesNoDialog;
-import org.droidplanner.android.dialogs.YesNoWithPrefsDialog;
-import org.droidplanner.android.fragments.helpers.ApiListenerFragment;
 import org.droidplanner.android.proxy.mission.MissionProxy;
 import org.droidplanner.android.utils.analytics.GAUtils;
 import org.droidplanner.android.utils.prefs.DroidPlannerPrefs;
@@ -137,6 +143,8 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
         }
     };
 
+    private final Handler mHandler = new Handler();
+
     private MissionProxy missionProxy;
 
     private View mDisconnectedButtons;
@@ -149,6 +157,7 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
     private Button landBtn;
     private Button pauseBtn;
     private Button autoBtn;
+    private Button uploadButton;
 
     private int orangeColor;
 
@@ -197,9 +206,14 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
 
         followBtn = (Button) view.findViewById(R.id.mc_follow);
         followBtn.setOnClickListener(this);
+        followBtn.setVisibility(View.GONE); // hide for this app
 
-        final Button dronieBtn = (Button) view.findViewById(R.id.mc_dronieBtn);
-        dronieBtn.setOnClickListener(this);
+        uploadButton = (Button)view.findViewById(R.id.mc_sendMissionBtn);
+        for(int id: new int[] {
+            R.id.mc_dropPointBtn, R.id.mc_sendMissionBtn, R.id.mc_hookBtn
+        }) {
+            view.findViewById(id).setOnClickListener(this);
+        }
     }
 
     @Override
@@ -283,10 +297,25 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
                 toggleFollowMe();
                 break;
 
-            case R.id.mc_dronieBtn:
-                getDronieConfirmation();
-                eventBuilder.setAction(ACTION_FLIGHT_ACTION_BUTTON).setLabel("Dronie uploaded");
+//            case R.id.mc_dronieBtn:
+//                getDronieConfirmation();
+//                eventBuilder.setAction(ACTION_FLIGHT_ACTION_BUTTON).setLabel("Dronie uploaded");
+//                break;
+
+            case R.id.mc_hookBtn: {
+                handleHook();
                 break;
+            }
+
+            case R.id.mc_dropPointBtn: {
+                handleDropPoint();
+                break;
+            }
+
+            case R.id.mc_sendMissionBtn: {
+                handleSendMission();
+                break;
+            }
 
             default:
                 eventBuilder = null;
@@ -301,17 +330,17 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
 
     private void getDronieConfirmation() {
         SupportYesNoWithPrefsDialog ynd = SupportYesNoWithPrefsDialog.newInstance(getActivity()
-                        .getApplicationContext(), getString(R.string.pref_dronie_creation_title),
-                getString(R.string.pref_dronie_creation_message), new SupportYesNoDialog.Listener() {
-                    @Override
-                    public void onYes() {
-                        missionProxy.makeAndUploadDronie(getDrone());
-                    }
+                .getApplicationContext(), getString(R.string.pref_dronie_creation_title),
+            getString(R.string.pref_dronie_creation_message), new SupportYesNoDialog.Listener() {
+                @Override
+                public void onYes() {
+                    missionProxy.makeAndUploadDronie(getDrone());
+                }
 
-                    @Override
-                    public void onNo() {
-                    }
-                }, DroidPlannerPrefs.PREF_WARN_ON_DRONIE_CREATION);
+                @Override
+                public void onNo() {
+                }
+            }, DroidPlannerPrefs.PREF_WARN_ON_DRONIE_CREATION);
 
         if (ynd != null) {
             ynd.show(getChildFragmentManager(), "Confirm dronie creation");
@@ -326,6 +355,7 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
                 getDrone().doGuidedTakeoff(takeOffAltitude);
             }
         });
+
         unlockDialog.show(getChildFragmentManager(), "Slide to take off");
     }
 
@@ -333,14 +363,24 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
         final SlideToUnlockDialog unlockDialog = SlideToUnlockDialog.newInstance("take off in auto", new Runnable() {
             @Override
             public void run() {
-
                 final int takeOffAltitude = getAppPrefs().getDefaultAltitude();
 
-                Drone drone = getDrone();
+                final Drone drone = getDrone();
+
+                // Need to bump the throttle to actually initiate the mission. Stupid.
                 drone.doGuidedTakeoff(takeOffAltitude);
-                drone.changeVehicleMode(VehicleMode.COPTER_AUTO);
+
+                broadcast(new Intent(AeroKontiki.EVENT_FLYING));
+
+                mHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        drone.changeVehicleMode(VehicleMode.COPTER_AUTO);
+                    }
+                }, 10000);
             }
         });
+
         unlockDialog.show(getChildFragmentManager(), "Slide to take off in auto");
     }
 
@@ -430,6 +470,12 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
     private void setupButtonsByFlightState() {
         final State droneState = getDrone().getAttribute(AttributeType.STATE);
         if (droneState != null && droneState.isConnected()) {
+
+            // Only set this once, so it doesn't get set again after it's been altered by a mission.
+            if(!AeroKontiki.hasWPSpeedParam()) {
+                AeroKontiki.setWPSpeedParam(getDrone().getSpeedParameter());
+            }
+
             if (droneState.isArmed()) {
                 if (droneState.isFlying()) {
                     setupButtonsForFlying();
@@ -439,7 +485,8 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
             } else {
                 setupButtonsForDisarmed();
             }
-        } else {
+        }
+        else {
             setupButtonsForDisconnected();
         }
     }
@@ -447,21 +494,29 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
     private void setupButtonsForDisconnected() {
         resetButtonsContainerVisibility();
         mDisconnectedButtons.setVisibility(View.VISIBLE);
+        broadcast(new Intent(AeroKontiki.EVENT_DISCONNECTED));
+
     }
 
     private void setupButtonsForDisarmed() {
         resetButtonsContainerVisibility();
         mDisarmedButtons.setVisibility(View.VISIBLE);
+
+        broadcast(new Intent(AeroKontiki.EVENT_DISARMED));
     }
 
     private void setupButtonsForArmed() {
         resetButtonsContainerVisibility();
         mArmedButtons.setVisibility(View.VISIBLE);
+
+        broadcast(new Intent(AeroKontiki.EVENT_ARMED));
     }
 
     private void setupButtonsForFlying() {
         resetButtonsContainerVisibility();
         mInFlightButtons.setVisibility(View.VISIBLE);
+
+        broadcast(new Intent(AeroKontiki.EVENT_FLYING));
     }
 
     @Override
@@ -471,5 +526,75 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
 
         final State droneState = drone.getAttribute(AttributeType.STATE);
         return droneState.isArmed() && droneState.isFlying();
+    }
+
+    void handleDropPoint() {
+        final Drone drone = DroidPlannerApp.get().getDrone();
+        Gps home = drone.getAttribute(AttributeType.GPS);
+
+        if(home != null && home.isValid()) {
+            Mission mission = new Mission();
+
+            final DroidPlannerPrefs prefs = DroidPlannerApp.get().getAppPreferences();
+            int dragSpeed = prefs.getDefaultDragSpeed();
+            int dragHeight = prefs.getDefaultDragAltitude();
+
+            final LatLong here = home.getPosition();
+
+            Log.v(TAG, "dragSpeed=" + dragSpeed + " dragHeight=" + dragHeight);
+
+            int idx = 0;
+
+            Waypoint dest = new Waypoint();
+            dest.setCoordinate(new LatLongAlt(here.getLatitude(), here.getLongitude(), dragHeight));
+            dest.setAcceptanceRadius(3f);
+            dest.setDelay(2);
+
+            mission.addMissionItem(idx++, dest);
+
+            missionProxy.load(mission);
+
+            Toast.makeText(getActivity(), R.string.toast_drag_point_prompt, Toast.LENGTH_LONG).show();
+            say(getActivity().getString(R.string.tts_set_drop_point_prompt));
+
+            uploadButton.setVisibility(View.VISIBLE);
+
+            broadcast(new Intent(AeroKontiki.EVENT_POINT_DROPPED));
+        }
+        else {
+            Toast.makeText(getActivity(), "Drone location not valid.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    void handleSendMission() {
+        Log.v(TAG, "handleSendMission()");
+        final Drone drone = DroidPlannerApp.get().getDrone();
+
+        AeroKontiki.massageMission(missionProxy);
+
+        missionProxy.sendMissionToAPM(drone);
+        broadcast(new Intent(AeroKontiki.EVENT_MISSION_SENT));
+
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                say(getActivity().getString(R.string.tts_arm_checklist_prompt));
+            }
+        }, 5000);
+    }
+
+    void handleHook() {
+        say("Operating hook");
+        ExperimentalApi.triggerCamera(DroidPlannerApp.get().getDrone());
+    }
+
+    private void say(String str) {
+        Intent intent = new Intent(AeroKontiki.EVENT_SPEAK)
+            .putExtra(AeroKontiki.EXTRA_DATA, str);
+        broadcast(intent);
+    }
+
+    private void broadcast(Intent intent) {
+        LocalBroadcastManager.getInstance(DroidPlannerApp.get()).sendBroadcast(intent);
     }
 }

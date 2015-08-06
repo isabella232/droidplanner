@@ -78,14 +78,18 @@
                     android:layout_height="wrap_content"
                     android:drawableLeft="@drawable/ic_account_circle_grey600_24dp"
                     android:drawableStart="@drawable/ic_account_circle_grey600_24dp"
-                    android:text="@string/account_label"/>
+                    android:text="@string/account_label"
+                    android:visibility="gone"
+                    />
 
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginTop="5dp"
                     android:layout_marginBottom="5dp"
-                    android:background="@color/light_grey"/>
+                    android:background="@color/light_grey"
+                    android:visibility="gone"
+                    />
 
                 <TextView
                     android:id="@+id/navigation_flight_data"
@@ -104,7 +108,8 @@
                     android:layout_height="wrap_content"
                     android:drawableLeft="@drawable/ic_edit_grey600_24dp"
                     android:drawableStart="@drawable/ic_edit_grey600_24dp"
-                    android:text="@string/editor"/>
+                    android:text="@string/editor"
+                    />
 
                 <TextView
                     android:id="@+id/navigation_locator"
@@ -120,7 +125,8 @@
                     android:layout_height="1dp"
                     android:layout_marginTop="5dp"
                     android:layout_marginBottom="5dp"
-                    android:background="@color/light_grey"/>
+                    android:background="@color/light_grey"
+                    />
 
                 <TextView
                     style="@style/navigationDrawerEntry"
@@ -129,7 +135,8 @@
                     android:id="@+id/navigation_settings"
                     android:drawableLeft="@drawable/ic_settings_grey600_24dp"
                     android:drawableStart="@drawable/ic_settings_grey600_24dp"
-                    android:text="@string/settings"/>
+                    android:text="@string/settings"
+                    />
 
                 <View
                     android:layout_width="match_parent"
@@ -145,7 +152,9 @@
                     android:id="@+id/navigation_params"
                     android:drawableLeft="@drawable/ic_action_database"
                     android:drawableStart="@drawable/ic_action_database"
-                    android:text="@string/screen_parameters"/>
+                    android:text="@string/screen_parameters"
+                    android:visibility="gone"
+                    />
 
                 <TextView
                     style="@style/navigationDrawerEntry"
@@ -165,6 +174,7 @@
                     android:drawableLeft="@drawable/ic_action_gear"
                     android:drawableStart="@drawable/ic_action_gear"
                     android:text="@string/screen_cal"
+                    android:visibility="gone"
                     />
 
             </LinearLayout>
