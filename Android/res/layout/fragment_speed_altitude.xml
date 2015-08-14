@@ -12,6 +12,35 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         >
+        <LinearLayout
+            android:id="@+id/layout_drag_distance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="6dip"
+            android:padding="4dip"
+            android:orientation="horizontal"
+            android:background="@color/layout_drag_distance_normal"
+            >
+            <TextView
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/lbl_drag_distance"
+                android:textColor="@android:color/white"
+                />
+
+            <TextView
+                android:id="@+id/txt_drag_distance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:paddingLeft="4dip"
+                android:paddingRight="4dip"
+                android:textColor="@android:color/white"
+                android:text="@string/drag_dist_unset"
+                />
+        </LinearLayout>
+
         <org.droidplanner.android.widgets.spinnerWheel.CardWheelHorizontalView
             android:id="@+id/pick_takeoff_altitude"
             android:layout_width="match_parent"

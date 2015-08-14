@@ -40,4 +40,8 @@
     <color name="medium_green">#50CB12</color>
     <color name="light_green">#5574D800</color>
 
+    <!-- AeroKontiki -->
+    <color name="layout_drag_distance_normal">#BB000000</color>
+    <color name="layout_drag_distance_error">#BBAA0000</color>
+
 </resources>

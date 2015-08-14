@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,14 +16,9 @@ import android.widget.Toast;
 import com.google.android.gms.analytics.HitBuilders;
 import com.o3dr.android.client.Drone;
 import com.o3dr.android.client.apis.drone.ExperimentalApi;
-import com.o3dr.services.android.lib.coordinate.LatLong;
-import com.o3dr.services.android.lib.coordinate.LatLongAlt;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEventExtra;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
-import com.o3dr.services.android.lib.drone.mission.Mission;
-import com.o3dr.services.android.lib.drone.mission.item.spatial.Waypoint;
-import com.o3dr.services.android.lib.drone.property.Gps;
 import com.o3dr.services.android.lib.drone.property.GuidedState;
 import com.o3dr.services.android.lib.drone.property.State;
 import com.o3dr.services.android.lib.drone.property.VehicleMode;
@@ -370,7 +364,7 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
                 // Need to bump the throttle to actually initiate the mission. Stupid.
                 drone.doGuidedTakeoff(takeOffAltitude);
 
-                broadcast(new Intent(AeroKontiki.EVENT_FLYING));
+                AeroKontiki.broadcast(new Intent(AeroKontiki.EVENT_FLYING));
 
                 mHandler.postDelayed(new Runnable() {
                     @Override
@@ -494,7 +488,7 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
     private void setupButtonsForDisconnected() {
         resetButtonsContainerVisibility();
         mDisconnectedButtons.setVisibility(View.VISIBLE);
-        broadcast(new Intent(AeroKontiki.EVENT_DISCONNECTED));
+        AeroKontiki.broadcast(new Intent(AeroKontiki.EVENT_DISCONNECTED));
 
     }
 
@@ -502,21 +496,21 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
         resetButtonsContainerVisibility();
         mDisarmedButtons.setVisibility(View.VISIBLE);
 
-        broadcast(new Intent(AeroKontiki.EVENT_DISARMED));
+        AeroKontiki.broadcast(new Intent(AeroKontiki.EVENT_DISARMED));
     }
 
     private void setupButtonsForArmed() {
         resetButtonsContainerVisibility();
         mArmedButtons.setVisibility(View.VISIBLE);
 
-        broadcast(new Intent(AeroKontiki.EVENT_ARMED));
+        AeroKontiki.broadcast(new Intent(AeroKontiki.EVENT_ARMED));
     }
 
     private void setupButtonsForFlying() {
         resetButtonsContainerVisibility();
         mInFlightButtons.setVisibility(View.VISIBLE);
 
-        broadcast(new Intent(AeroKontiki.EVENT_FLYING));
+        AeroKontiki.broadcast(new Intent(AeroKontiki.EVENT_FLYING));
     }
 
     @Override
@@ -529,41 +523,8 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
     }
 
     void handleDropPoint() {
-        final Drone drone = DroidPlannerApp.get().getDrone();
-        Gps home = drone.getAttribute(AttributeType.GPS);
-
-        if(home != null && home.isValid()) {
-            Mission mission = new Mission();
-
-            final DroidPlannerPrefs prefs = DroidPlannerApp.get().getAppPreferences();
-            int dragSpeed = prefs.getDefaultDragSpeed();
-            int dragHeight = prefs.getDefaultDragAltitude();
-
-            final LatLong here = home.getPosition();
-
-            Log.v(TAG, "dragSpeed=" + dragSpeed + " dragHeight=" + dragHeight);
-
-            int idx = 0;
-
-            Waypoint dest = new Waypoint();
-            dest.setCoordinate(new LatLongAlt(here.getLatitude(), here.getLongitude(), dragHeight));
-            dest.setAcceptanceRadius(3f);
-            dest.setDelay(2);
-
-            mission.addMissionItem(idx++, dest);
-
-            missionProxy.load(mission);
-
-            Toast.makeText(getActivity(), R.string.toast_drag_point_prompt, Toast.LENGTH_LONG).show();
-            say(getActivity().getString(R.string.tts_set_drop_point_prompt));
-
-            uploadButton.setVisibility(View.VISIBLE);
-
-            broadcast(new Intent(AeroKontiki.EVENT_POINT_DROPPED));
-        }
-        else {
-            Toast.makeText(getActivity(), "Drone location not valid.", Toast.LENGTH_SHORT).show();
-        }
+        boolean ok = AeroKontiki.generateNewMission(getActivity(), missionProxy);
+        uploadButton.setVisibility((ok)? View.VISIBLE: View.GONE);
     }
 
     void handleSendMission() {
@@ -573,28 +534,29 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
         AeroKontiki.massageMission(missionProxy);
 
         missionProxy.sendMissionToAPM(drone);
-        broadcast(new Intent(AeroKontiki.EVENT_MISSION_SENT));
+        AeroKontiki.broadcast(new Intent(AeroKontiki.EVENT_MISSION_SENT));
 
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                say(getActivity().getString(R.string.tts_arm_checklist_prompt));
+                AeroKontiki.say(getActivity().getString(R.string.tts_arm_checklist_prompt));
             }
         }, 5000);
     }
 
     void handleHook() {
-        say("Operating hook");
-        ExperimentalApi.triggerCamera(DroidPlannerApp.get().getDrone());
-    }
+        AeroKontiki.say(getActivity().getString(R.string.tts_operating_hook));
+        final Drone drone = DroidPlannerApp.get().getDrone();
 
-    private void say(String str) {
-        Intent intent = new Intent(AeroKontiki.EVENT_SPEAK)
-            .putExtra(AeroKontiki.EXTRA_DATA, str);
-        broadcast(intent);
-    }
+        Log.v(TAG, "open hook");
+        ExperimentalApi.epmCommand(drone, true);
 
-    private void broadcast(Intent intent) {
-        LocalBroadcastManager.getInstance(DroidPlannerApp.get()).sendBroadcast(intent);
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                Log.v(TAG, "close hook");
+                ExperimentalApi.epmCommand(drone, false);
+            }
+        }, 5000);
     }
 }

@@ -16,6 +16,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.widget.Button;
+import android.widget.TextView;
 
 import org.beyene.sius.unit.composition.speed.SpeedUnit;
 import org.beyene.sius.unit.length.LengthUnit;
@@ -118,11 +119,13 @@ public class SpeedAndAltitudeFragment extends Fragment {
                 case AeroKontiki.EVENT_ARMED:
                 case AeroKontiki.EVENT_FLYING: {
                     showView(mWheelLayout, false);
+                    showView(mDistanceLayout, false);
                     showView(mCancelFlightButton, true);
                     break;
                 }
 
                 case AeroKontiki.EVENT_MISSION_SENT: {
+                    showView(mDistanceLayout, false);
                     showView(mWheelLayout, false);
                     showView(mCancelFlightButton, false);
                     break;
@@ -130,7 +133,9 @@ public class SpeedAndAltitudeFragment extends Fragment {
 
                 case AeroKontiki.EVENT_DISCONNECTED:
                 case AeroKontiki.EVENT_POINT_DROPPED: {
-                    showView(mWheelLayout, AeroKontiki.EVENT_POINT_DROPPED.equals(action));
+                    boolean dropped = AeroKontiki.EVENT_POINT_DROPPED.equals(action);
+                    showView(mWheelLayout, dropped);
+                    showView(mDistanceLayout, dropped);
                     showView(mCancelFlightButton, false);
                     break;
                 }
@@ -158,6 +163,8 @@ public class SpeedAndAltitudeFragment extends Fragment {
     private SpeedUnitProvider speedUnitProvider;
 
     private View mWheelLayout;
+    private TextView mDistanceText;
+    private View mDistanceLayout;
     private CardWheelHorizontalView<SpeedUnit> mDragSpeedPicker;
     private CardWheelHorizontalView<SpeedUnit> mReturnSpeedPicker;
     private CardWheelHorizontalView<LengthUnit> mTakeoffAltitudePicker;
@@ -183,6 +190,9 @@ public class SpeedAndAltitudeFragment extends Fragment {
         final Context context = DroidPlannerApp.get();
 
         initProviders(context);
+
+        mDistanceLayout = view.findViewById(R.id.layout_drag_distance);
+        mDistanceText = (TextView)view.findViewById(R.id.txt_drag_distance);
 
         mWheelLayout = view.findViewById(R.id.layout_wheels);
         mDragSpeedPicker = (CardWheelHorizontalView<SpeedUnit>)view.findViewById(R.id.pick_drag_speed);
@@ -218,6 +228,7 @@ public class SpeedAndAltitudeFragment extends Fragment {
 
         showView(mWheelLayout, false);
         showView(mCancelFlightButton, false);
+        showView(mDistanceLayout, false);
     }
 
     @Override
@@ -241,6 +252,16 @@ public class SpeedAndAltitudeFragment extends Fragment {
         lengthUnitProvider = unitSystem.getLengthUnitProvider();
         areaUnitProvider = unitSystem.getAreaUnitProvider();
         speedUnitProvider = unitSystem.getSpeedUnitProvider();
+    }
+
+    public void showDragDistance(double distance) {
+        final int maxDrag = DroidPlannerApp.get().getAppPreferences().getMaxDragDistance();
+        String unit = (distance > 1000)? "km": "m";
+        double measured = (distance > 1000)? (distance / 1000): distance;
+
+        mDistanceText.setText(String.format("%.2f %s", measured, unit));
+        int colorId = (distance > maxDrag)? R.color.layout_drag_distance_error: R.color.layout_drag_distance_normal;
+        mDistanceLayout.setBackgroundColor(getActivity().getResources().getColor(colorId));
     }
 
     void onCancelFlightClick(View v) {
@@ -279,7 +300,7 @@ public class SpeedAndAltitudeFragment extends Fragment {
         if(parentView != null) {
             boolean show = false;
 
-            for(View vv: new View[] {mCancelFlightButton, mTakeoffAltitudePicker, mDragSpeedPicker}) {
+            for(View vv: new View[] {mCancelFlightButton, mWheelLayout, mDistanceLayout}) {
                 if(mCancelFlightButton.getVisibility() == View.VISIBLE) {
                     show = true;
                     break;

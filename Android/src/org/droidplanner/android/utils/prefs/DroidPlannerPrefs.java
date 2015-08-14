@@ -165,6 +165,9 @@ public class DroidPlannerPrefs {
 	public static final String PREF_RETURN_SPEED = "return_speed";
 	public static final int DEFAULT_RETURN_SPEED = 10;
 
+	public static final String PREF_MAX_DRAG_DIST = "pref_drag_dist_max_value";
+	public static final int DEFAULT_MAX_DRAG_DIST = 500;
+
 	// Public for legacy usage
 	public SharedPreferences prefs;
 
@@ -505,4 +508,8 @@ public class DroidPlannerPrefs {
 	public void setDefaultTakeoffAltitude(int alt) {
 		prefs.edit().putInt(PREF_TO_ALTITUDE, alt).apply();
 	}
+
+	public int getMaxDragDistance() { return prefs.getInt(PREF_MAX_DRAG_DIST, DEFAULT_MAX_DRAG_DIST); }
+
+	public void setMaxDragDistance(int max) { prefs.edit().putInt(PREF_MAX_DRAG_DIST, max).apply(); }
 }

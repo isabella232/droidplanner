@@ -212,6 +212,7 @@ public class SettingsFragment extends PreferenceFragment implements OnSharedPref
         setupImminentGroundCollisionWarningPreference();
         setupMapPreferences();
         setupAltitudePreferences();
+        setupMaxDragDistPreferences();
     }
 
     private void setupMapProviders(){
@@ -362,7 +363,7 @@ public class SettingsFragment extends PreferenceFragment implements OnSharedPref
             preference.setOnResultListener(new ClearBTDialogPreference.OnResultListener() {
                 @Override
                 public void onResult(boolean result) {
-                    if (result) {
+                    if(result) {
                         updateBluetoothDevicePreference(preference, dpPrefs.getBluetoothDeviceAddress());
                     }
                 }
@@ -374,6 +375,31 @@ public class SettingsFragment extends PreferenceFragment implements OnSharedPref
         setupAltitudePreferenceHelper(DroidPlannerPrefs.PREF_ALT_MAX_VALUE, dpPrefs.getMaxAltitude());
         setupAltitudePreferenceHelper(DroidPlannerPrefs.PREF_ALT_MIN_VALUE, dpPrefs.getMinAltitude());
         setupAltitudePreferenceHelper(DroidPlannerPrefs.PREF_ALT_DEFAULT_VALUE, dpPrefs.getDefaultAltitude());
+    }
+
+    private void setupMaxDragDistPreferences() {
+        final EditTextPreference pref = (EditTextPreference)findPreference(DroidPlannerPrefs.PREF_MAX_DRAG_DIST);
+        if(pref != null) {
+            pref.setText(String.valueOf(dpPrefs.getMaxDragDistance()));
+
+            pref.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+
+                @Override
+                public boolean onPreferenceChange(Preference preference, Object newValue) {
+                    try {
+                        final int value = Integer.valueOf(newValue.toString());
+                        pref.setText(String.valueOf(value));
+                        pref.setSummary(newValue.toString());
+
+                        dpPrefs.setMaxDragDistance(value);
+                    }
+                    catch(Throwable ex) {
+                        ex.printStackTrace();
+                    }
+                    return false;
+                }
+            });
+        }
     }
 
     private void setupAltitudePreferenceHelper(final String prefKey, int defaultAlt){

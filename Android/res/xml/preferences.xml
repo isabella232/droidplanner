@@ -271,6 +271,19 @@
             </PreferenceCategory>
 
             <PreferenceCategory
+                android:title="@string/pref_drag_distance_cat"
+                >
+                <EditTextPreference
+                    android:gravity="center"
+                    android:inputType="numberSigned"
+                    android:key="pref_drag_dist_max_value"
+                    android:title="@string/pref_drag_dist_max_title"
+                    android:persistent="false"
+                    android:numeric="integer"
+                    />
+            </PreferenceCategory>
+
+            <PreferenceCategory
                 android:title="@string/pref_alt_title">
 
                 <EditTextPreference

@@ -1,7 +1,9 @@
 package org.droidplanner.android.fragments;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +15,7 @@ import com.o3dr.services.android.lib.drone.mission.item.MissionItem;
 import com.o3dr.services.android.lib.drone.property.Home;
 
 import org.droidplanner.android.activities.interfaces.OnEditorInteraction;
+import org.droidplanner.android.aerokontiki.AeroKontiki;
 import org.droidplanner.android.maps.DPMap;
 import org.droidplanner.android.maps.MarkerInfo;
 import org.droidplanner.android.proxy.mission.item.markers.MissionItemMarkerInfo;
@@ -55,6 +58,12 @@ public class EditorMapFragment extends DroneMap implements DPMap.OnMapLongClickL
 	}
 
 	private void checkForWaypointMarkerMoving(MarkerInfo markerInfo) {
+		LatLong pos = markerInfo.getPosition();
+		if(pos != null) {
+			getBroadcastManager().sendBroadcast(
+				new Intent(AeroKontiki.EVENT_MARKER_MOVING).putExtra(AeroKontiki.EXTRA_DATA, (Parcelable)pos));
+		}
+
 		if (markerInfo instanceof MissionItem.SpatialItem) {
 			LatLong position = markerInfo.getPosition();
 

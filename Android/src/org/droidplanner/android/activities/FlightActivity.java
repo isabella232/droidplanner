@@ -72,6 +72,7 @@ public class FlightActivity extends DrawerNavigationUI
         eventFilter.addAction(AttributeEvent.FOLLOW_START);
         eventFilter.addAction(AttributeEvent.MISSION_DRONIE_CREATED);
         eventFilter.addAction(AeroKontiki.EVENT_DISARMED);
+        eventFilter.addAction(AeroKontiki.EVENT_MARKER_MOVING);
     }
 
     private final BroadcastReceiver eventReceiver = new BroadcastReceiver() {
@@ -105,6 +106,25 @@ public class FlightActivity extends DrawerNavigationUI
                     if (dronieBearing != -1)
                         updateMapBearing(dronieBearing);
                     break;
+
+                case AeroKontiki.EVENT_MARKER_MOVING: {
+                    LatLong there = intent.getParcelableExtra(AeroKontiki.EXTRA_DATA);
+                    if(there != null) {
+                        Log.v(TAG, "pos.lat=" + there.getLatitude() + " pos.lng=" + there.getLongitude());
+                        LatLong here = AeroKontiki.getMyLocation();
+                        if(here != null) {
+                            double dist = AeroKontiki.metersBetween(here, there);
+                            if(speedAndAltitudeFragment != null) {
+                                speedAndAltitudeFragment.showDragDistance(dist);
+                            }
+                        }
+                    }
+                    else {
+                        Log.w(TAG, "No position");
+                    }
+
+                    break;
+                }
 
                 case AeroKontiki.EVENT_DISARMED:
                     final Drone drone = DroidPlannerApp.get().getDrone();

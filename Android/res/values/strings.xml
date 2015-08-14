@@ -464,5 +464,10 @@
     <string name="tts_set_drop_point_prompt">Drag the waypoint to the desired location on the map. Adjust speed and altitude parameters. Then, press Upload.</string>
     <string name="toast_no_device_location">No device location!</string>
     <string name="tts_arm_checklist_prompt">Ensure the line is attached and clear of any obstruction, and ensure that you have a fully charged battery. You should now be ready to arm.</string>
+    <string name="lbl_drag_distance">Drag Distance:</string>
+    <string name="drag_dist_unset">--</string>
+    <string name="pref_drag_distance_cat">Drag Distance</string>
+    <string name="pref_drag_dist_max_title">Maximum Drag Distance</string>
+    <string name="tts_operating_hook">Operating hook</string>
 
 </resources>
