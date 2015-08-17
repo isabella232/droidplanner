@@ -12,14 +12,15 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.o3dr.android.client.Drone;
+import com.o3dr.android.client.apis.drone.ExperimentalApi;
 import com.o3dr.services.android.lib.coordinate.LatLong;
 import com.o3dr.services.android.lib.coordinate.LatLongAlt;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
 import com.o3dr.services.android.lib.drone.mission.Mission;
 import com.o3dr.services.android.lib.drone.mission.item.MissionItem;
 import com.o3dr.services.android.lib.drone.mission.item.command.ChangeSpeed;
-import com.o3dr.services.android.lib.drone.mission.item.command.EpmGripper;
 import com.o3dr.services.android.lib.drone.mission.item.command.ReturnToLaunch;
+import com.o3dr.services.android.lib.drone.mission.item.command.SetServo;
 import com.o3dr.services.android.lib.drone.mission.item.command.Takeoff;
 import com.o3dr.services.android.lib.drone.mission.item.spatial.Waypoint;
 import com.o3dr.services.android.lib.drone.property.Gps;
@@ -54,6 +55,10 @@ public class AeroKontiki {
     public static final String EVENT_MARKER_MOVING = "com.aerokontiki.apps.android.event.MARKER_MOVING";
 
     public static final String EXTRA_DATA = "_data_";
+
+    public static final int SERVO_HOOK_CHANNEL = 9;
+    public static final int SERVO_HOOK_PWM_OPEN = 1100;
+    public static final int SERVO_HOOK_PWM_CLOSE = 1900;
 
     private static double sWPNavSpeedParam = 0;
 
@@ -198,17 +203,27 @@ public class AeroKontiki {
         output.add(dest);
 
         // Drop the line
-        EpmGripper open = new EpmGripper();
-        open.setRelease(true);
-        output.add(open);
+//        EpmGripper open = new EpmGripper();
+//        open.setRelease(true);
+//        output.add(open);
 
-        Waypoint gripperOpen = new Waypoint(dest);
-        gripperOpen.setDelay(5);
-        output.add(gripperOpen);
+        SetServo servoOpen = new SetServo();
+        servoOpen.setChannel(SERVO_HOOK_CHANNEL);
+        servoOpen.setPwm(SERVO_HOOK_PWM_OPEN);
+        output.add(servoOpen);
 
-        EpmGripper closeGripper = new EpmGripper();
-        closeGripper.setRelease(false);
-        output.add(closeGripper);
+        Waypoint waitForDrop = new Waypoint(dest);
+        waitForDrop.setDelay(5);
+        output.add(waitForDrop);
+
+//        EpmGripper closeGripper = new EpmGripper();
+//        closeGripper.setRelease(false);
+//        output.add(closeGripper);
+
+        SetServo servoClose = new SetServo();
+        servoClose.setChannel(SERVO_HOOK_CHANNEL);
+        servoClose.setPwm(SERVO_HOOK_PWM_CLOSE);
+        output.add(servoClose);
 
         // Set the return speed.
         ChangeSpeed returnSpeed = new ChangeSpeed();
@@ -217,7 +232,7 @@ public class AeroKontiki {
 
         // Pause at the destination for a couple of seconds after dropping
         Waypoint preReturn = new Waypoint(dest);
-        preReturn.setDelay(5);
+        preReturn.setDelay(2);
         output.add(preReturn);
 
         // Return to launch.
@@ -280,5 +295,24 @@ public class AeroKontiki {
         Intent intent = new Intent(EVENT_SPEAK)
             .putExtra(EXTRA_DATA, str);
         broadcast(intent);
+    }
+
+    public static void openHook(Drone drone) {
+        ExperimentalApi.setServo(drone, SERVO_HOOK_CHANNEL, SERVO_HOOK_PWM_OPEN);
+    }
+
+    public static void closeHook(Drone drone) {
+        ExperimentalApi.setServo(drone, SERVO_HOOK_CHANNEL, SERVO_HOOK_PWM_CLOSE);
+    }
+
+    public static void operateHook(final Drone drone, Handler handler, long keepOpenMs) {
+        openHook(drone);
+
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                closeHook(drone);
+            }
+        }, keepOpenMs);
     }
 }

@@ -15,7 +15,6 @@ import android.widget.Toast;
 
 import com.google.android.gms.analytics.HitBuilders;
 import com.o3dr.android.client.Drone;
-import com.o3dr.android.client.apis.drone.ExperimentalApi;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEventExtra;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
@@ -547,16 +546,6 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
     void handleHook() {
         AeroKontiki.say(getActivity().getString(R.string.tts_operating_hook));
         final Drone drone = DroidPlannerApp.get().getDrone();
-
-        Log.v(TAG, "open hook");
-        ExperimentalApi.epmCommand(drone, true);
-
-        mHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                Log.v(TAG, "close hook");
-                ExperimentalApi.epmCommand(drone, false);
-            }
-        }, 5000);
+        AeroKontiki.operateHook(drone, mHandler, 5000);
     }
 }
