@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -39,7 +38,6 @@ import org.droidplanner.android.utils.prefs.DroidPlannerPrefs;
  * Provide functionality for flight action button specific to copters.
  */
 public class CopterFlightControlFragment extends BaseFlightControlFragment {
-
     private static final String TAG = CopterFlightControlFragment.class.getSimpleName();
 
     private static final String ACTION_FLIGHT_ACTION_BUTTON = "Copter flight action button";
@@ -356,7 +354,7 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
         final SlideToUnlockDialog unlockDialog = SlideToUnlockDialog.newInstance("take off in auto", new Runnable() {
             @Override
             public void run() {
-                final int takeOffAltitude = getAppPrefs().getDefaultAltitude();
+                final int takeOffAltitude = 2; // getAppPrefs().getDefaultAltitude();
 
                 final Drone drone = getDrone();
 
@@ -370,7 +368,7 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
                     public void run() {
                         drone.changeVehicleMode(VehicleMode.COPTER_AUTO);
                     }
-                }, 10000);
+                }, 3000);
             }
         });
 
@@ -527,7 +525,6 @@ public class CopterFlightControlFragment extends BaseFlightControlFragment {
     }
 
     void handleSendMission() {
-        Log.v(TAG, "handleSendMission()");
         final Drone drone = DroidPlannerApp.get().getDrone();
 
         AeroKontiki.massageMission(missionProxy);

@@ -60,6 +60,8 @@ public class AeroKontiki {
     public static final int SERVO_HOOK_PWM_OPEN = 1100;
     public static final int SERVO_HOOK_PWM_CLOSE = 1900;
 
+    private static final double LEAN_OUT_METERS = 10.0;
+
     private static double sWPNavSpeedParam = 0;
 
     public static IntentFilter populate(IntentFilter filter) {
@@ -155,7 +157,7 @@ public class AeroKontiki {
     /** Update the mission so it contains more useful waypoints. */
     public static void massageMission(MissionProxy missionProxy) {
         final Drone drone = DroidPlannerApp.get().getDrone();
-//        final Gps home = drone.getAttribute(AttributeType.GPS);
+        final Gps home = drone.getAttribute(AttributeType.GPS);
 
         ArrayList<MissionItem> output = new ArrayList<MissionItem>();
 
@@ -166,7 +168,7 @@ public class AeroKontiki {
         final int dragSpeed = prefs.getDefaultDragSpeed();
         final int retSpeed = prefs.getDefaultReturnSpeed();
 
-        Waypoint dest = null;
+        Waypoint dropPoint = null;
 
         // Find the waypoint in the initial mission.
         List<MissionItemProxy> proxies = missionProxy.getItems();
@@ -174,24 +176,43 @@ public class AeroKontiki {
             MissionItem item = proxy.getMissionItem();
             if(item != null) {
                 if(item instanceof Waypoint) {
-                    dest = (Waypoint)item;
+                    dropPoint = (Waypoint)item;
                 }
             }
         }
 
-        // Takeoff to the drag altitude
+        final boolean homeValid = (home != null && home.isValid());
+
+        // Takeoff. If home is valid, we'll set a "pull out" waypoint
+        // 10 meters forward of the takeoff point. If we can't do that,
+        // we'll just take off to the drag altitude.
         Takeoff to = new Takeoff();
-        to.setTakeoffAltitude(takeoffAlt);
+        to.setTakeoffAltitude((homeValid)? 2: takeoffAlt);
         output.add(to);
 
-        // Disabling this for now, until it can be set to be several meters closer to dest.
-//        if(home != null && home.isValid()) {
-//            Waypoint pause = new Waypoint();
-//            final LatLong here = home.getPosition();
-//            pause.setCoordinate(new LatLongAlt(here.getLatitude(), here.getLongitude(), (double)dragAlt));
-//            pause.setDelay(5);
-//            output.add(pause);
-//        }
+        if(homeValid) {
+            Waypoint pause = new Waypoint();
+
+            final LatLong there = new LatLong(
+                dropPoint.getCoordinate().getLatitude(),
+                dropPoint.getCoordinate().getLongitude());
+
+            // We want a pause waypoint 10 meters out from here. Calculate a scale
+            // based on how much of the total distance our fly-out distance is.
+            double distance = MathUtils.getDistance2D(home.getPosition(), there);
+            double leanOutMeters = (takeoffAlt / 1.5);
+            double scale = (leanOutMeters / distance);
+
+            if(scale > 0.5) {
+                scale = 0.1;
+            }
+
+            LatLong mid = midPoint(home.getPosition(), there, scale);
+            pause.setCoordinate(new LatLongAlt(mid.getLatitude(), mid.getLongitude(), (double)takeoffAlt));
+
+            pause.setDelay(3);
+            output.add(pause);
+        }
 
         // Set the drag speed
         ChangeSpeed speed = new ChangeSpeed();
@@ -199,27 +220,29 @@ public class AeroKontiki {
         output.add(speed);
 
         // Fly to the destination
-        dest.setDelay(2);
-        output.add(dest);
+        dropPoint.setDelay(2);
+        output.add(dropPoint);
 
         // Drop the line
 //        EpmGripper open = new EpmGripper();
 //        open.setRelease(true);
 //        output.add(open);
 
+        // Replaced the above with this
         SetServo servoOpen = new SetServo();
         servoOpen.setChannel(SERVO_HOOK_CHANNEL);
         servoOpen.setPwm(SERVO_HOOK_PWM_OPEN);
         output.add(servoOpen);
 
-        Waypoint waitForDrop = new Waypoint(dest);
-        waitForDrop.setDelay(5);
+        Waypoint waitForDrop = new Waypoint(dropPoint);
+        waitForDrop.setDelay(2);
         output.add(waitForDrop);
 
 //        EpmGripper closeGripper = new EpmGripper();
 //        closeGripper.setRelease(false);
 //        output.add(closeGripper);
 
+        // Replaced the above with this:
         SetServo servoClose = new SetServo();
         servoClose.setChannel(SERVO_HOOK_CHANNEL);
         servoClose.setPwm(SERVO_HOOK_PWM_CLOSE);
@@ -231,8 +254,8 @@ public class AeroKontiki {
         output.add(returnSpeed);
 
         // Pause at the destination for a couple of seconds after dropping
-        Waypoint preReturn = new Waypoint(dest);
-        preReturn.setDelay(2);
+        Waypoint preReturn = new Waypoint(dropPoint);
+        preReturn.setDelay(1);
         output.add(preReturn);
 
         // Return to launch.
@@ -247,7 +270,7 @@ public class AeroKontiki {
         missionProxy.load(mission);
     }
 
-    public static void onMissionCanceled(Context context, Handler handler) {
+    public static void onMissionCanceled(final Context context, Handler handler) {
         final Drone drone = DroidPlannerApp.get().getDrone();
         final State droneState = drone.getAttribute(AttributeType.STATE);
         final Gps location = drone.getAttribute(AttributeType.GPS);
@@ -255,7 +278,21 @@ public class AeroKontiki {
 
         if(droneState.isFlying()) {
             drone.changeVehicleMode(VehicleMode.COPTER_BRAKE);
-            Toast.makeText(context, "Release the line within 5 seconds", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, context.getString(R.string.toast_release_line_5sec), Toast.LENGTH_SHORT).show();
+
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    openHook(drone);
+                }
+            }, 3000);
+
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    closeHook(drone);
+                }
+            }, 12000);
 
             handler.postDelayed(new Runnable() {
                 @Override
@@ -263,7 +300,7 @@ public class AeroKontiki {
                     LocalBroadcastManager.getInstance(
                         DroidPlannerApp.get()).sendBroadcast(
                         new Intent(AeroKontiki.EVENT_SPEAK)
-                            .putExtra(AeroKontiki.EXTRA_DATA, "Ensure that the line is released. You have 5 seconds."));
+                            .putExtra(AeroKontiki.EXTRA_DATA, context.getString(R.string.tts_release_line_5sec)));
                 }
             }, 2000);
 
@@ -314,5 +351,40 @@ public class AeroKontiki {
                 closeHook(drone);
             }
         }, keepOpenMs);
+    }
+
+    public static LatLong midPoint(LatLong here, LatLong there, double fraction) {
+        Location
+            lHere = new Location("here"),
+            lThere = new Location("there");
+        lHere.setLatitude(here.getLatitude());
+        lHere.setLongitude(here.getLongitude());
+
+        lThere.setLatitude(there.getLatitude());
+        lThere.setLongitude(there.getLongitude());
+
+        Location mid = midPoint(lHere, lThere, fraction);
+        return new LatLong(mid.getLatitude(), mid.getLongitude());
+    }
+
+    public static Location midPoint(Location here, Location there, double fraction) {
+        double lat1 = here.getLatitude();
+        double lon1 = here.getLongitude();
+        double lat2 = there.getLatitude();
+        double lon2 = there.getLongitude();
+
+        Location out = new Location("midway");
+        out.setLatitude(lat1 + ((lat2 - lat1) * fraction));
+        out.setLongitude(lon1 + ((lon2 - lon1) * fraction));
+
+        return out;
+    }
+
+    public static double metersSecondToMph(double value) {
+        return (value * 2.23694);
+    }
+
+    public static double metersSecondToKph(double value) {
+        return (value * 3.6);
     }
 }

@@ -19,6 +19,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import org.beyene.sius.unit.composition.speed.SpeedUnit;
+import org.beyene.sius.unit.impl.FactorySpeed;
 import org.beyene.sius.unit.length.LengthUnit;
 import org.droidplanner.android.DroidPlannerApp;
 import org.droidplanner.android.R;
@@ -28,6 +29,7 @@ import org.droidplanner.android.utils.unit.UnitManager;
 import org.droidplanner.android.utils.unit.providers.area.AreaUnitProvider;
 import org.droidplanner.android.utils.unit.providers.length.LengthUnitProvider;
 import org.droidplanner.android.utils.unit.providers.speed.SpeedUnitProvider;
+import org.droidplanner.android.utils.unit.systems.ImperialUnitSystem;
 import org.droidplanner.android.utils.unit.systems.UnitSystem;
 import org.droidplanner.android.widgets.spinnerWheel.CardWheelHorizontalView;
 import org.droidplanner.android.widgets.spinnerWheel.adapters.LengthWheelAdapter;
@@ -49,6 +51,8 @@ public class SpeedAndAltitudeFragment extends Fragment {
 
     static final int MIN_ALTITUDE = 10;
     static final int MAX_ALTITUDE = 100;
+    static final int MIN_SPEED = 2;
+    static final int MAX_SPEED = 25;
 
     private final CardWheelHorizontalView.OnCardWheelScrollListener<SpeedUnit> mSpeedScrollListener = new CardWheelHorizontalView.OnCardWheelScrollListener<SpeedUnit>() {
         public void onScrollingStarted(CardWheelHorizontalView cardWheel, SpeedUnit startValue) { }
@@ -62,6 +66,8 @@ public class SpeedAndAltitudeFragment extends Fragment {
                     if(mListener != null) {
                         mListener.onDragSpeedSet(baseValue);
                     }
+
+                    setSpeedText(cardWheel, R.string.lbl_drag_speed_wheel, baseValue);
                     break;
                 }
 
@@ -70,6 +76,8 @@ public class SpeedAndAltitudeFragment extends Fragment {
                     if(mListener != null) {
                         mListener.onReturnSpeedSet(baseValue);
                     }
+
+                    setSpeedText(cardWheel, R.string.lbl_return_speed_wheel, baseValue);
                     break;
                 }
             }
@@ -201,7 +209,7 @@ public class SpeedAndAltitudeFragment extends Fragment {
         mDropAltitudePicker = (CardWheelHorizontalView<LengthUnit>)view.findViewById(R.id.pick_drop_altitude);
 
         final SpeedWheelAdapter adapter = new SpeedWheelAdapter(context, R.layout.wheel_text_centered,
-            speedUnitProvider.boxBaseValueToTarget(2), speedUnitProvider.boxBaseValueToTarget(25));
+            speedUnitProvider.boxBaseValueToTarget(MIN_SPEED), speedUnitProvider.boxBaseValueToTarget(MAX_SPEED));
         mDragSpeedPicker.setViewAdapter(adapter);
         mDragSpeedPicker.addScrollListener(mSpeedScrollListener);
 
@@ -225,6 +233,9 @@ public class SpeedAndAltitudeFragment extends Fragment {
         mTakeoffAltitudePicker.setCurrentValue(lengthUnitProvider.boxBaseValueToTarget(prefs.getDefaultDragAltitude()));
         mDragSpeedPicker.setCurrentValue(speedUnitProvider.boxBaseValueToTarget(prefs.getDefaultDragSpeed()));
         mReturnSpeedPicker.setCurrentValue(speedUnitProvider.boxBaseValueToTarget(prefs.getDefaultReturnSpeed()));
+
+        setSpeedText(mDragSpeedPicker, R.string.lbl_drag_speed_wheel, speedUnitProvider.boxBaseValueToTarget(prefs.getDefaultDragSpeed()).getValue());
+        setSpeedText(mReturnSpeedPicker, R.string.lbl_return_speed_wheel, speedUnitProvider.boxBaseValueToTarget(prefs.getDefaultReturnSpeed()).getValue());
 
         showView(mWheelLayout, false);
         showView(mCancelFlightButton, false);
@@ -288,7 +299,7 @@ public class SpeedAndAltitudeFragment extends Fragment {
 
     void showView(View v, boolean show) {
         if(v != null) {
-            v.setVisibility((show)? View.VISIBLE: View.GONE);
+            v.setVisibility((show) ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -306,13 +317,25 @@ public class SpeedAndAltitudeFragment extends Fragment {
                     break;
                 }
             }
-
-            Log.v(TAG, "show=" + show);
-
-//            showView(parentView, show);
         }
         else {
             Log.w(TAG, "parentView is null");
         }
+    }
+
+    void setSpeedText(CardWheelHorizontalView<?> wheel, int stringId, double value) {
+        final Context context = wheel.getContext();
+        UnitSystem sys = UnitManager.getUnitSystem(context);
+
+        String text = null;
+
+        if(sys instanceof ImperialUnitSystem) {
+            text = context.getString(R.string.cvt_mph, FactorySpeed.mph(value).getValue());
+        }
+        else {
+            text = context.getString(R.string.cvt_kph, AeroKontiki.metersSecondToKph(value));
+        }
+
+        wheel.setText(context.getString(stringId, text));
     }
 }

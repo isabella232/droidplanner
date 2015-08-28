@@ -452,22 +452,29 @@
     <string name="btn_yes">Yes</string>
     <string name="lbl_takeoff_altitude">Takeoff Altitude</string>
     <string name="lbl_drop_altitude">Drop Altitude</string>
-    <string name="lbl_drag_speed">Drag Speed</string>
+    <string name="lbl_drag_speed">Haul Speed</string>
     <string name="lbl_return_speed">Return Speed</string>
-    <string name="btn_cancel_flight">Cancel Flight</string>
-    <string name="dlg_cancel_flight_title">Cancel Flight</string>
-    <string name="dlg_cancel_flight_msg">Cancel this flight? The line will be dropped and the UAV will return.</string>
+    <string name="btn_cancel_flight">Abort Flight</string>
+    <string name="dlg_cancel_flight_title">Abort Flight</string>
+    <string name="dlg_cancel_flight_msg">Abort this flight? The line will be dropped and the UAV will return.</string>
     <string name="mission_control_hook_line">Attach</string>
     <string name="mission_control_drop_point">Drop</string>
     <string name="mission_control_send_mission">Upload</string>
     <string name="toast_drag_point_prompt">Drag waypoints to the desired locations. Then, press Upload.</string>
     <string name="tts_set_drop_point_prompt">Drag the waypoint to the desired location on the map. Adjust speed and altitude parameters. Then, press Upload.</string>
     <string name="toast_no_device_location">No device location!</string>
-    <string name="tts_arm_checklist_prompt">Ensure the line is attached and clear of any obstruction, and ensure that you have a fully charged battery. You should now be ready to arm.</string>
-    <string name="lbl_drag_distance">Drag Distance:</string>
+    <string name="tts_arm_checklist_prompt">Ensure the line is attached and clear of any obstruction, and battery is fully charged. You should now be ready to arm.</string>
+    <string name="lbl_drag_distance">Haul Distance:</string>
     <string name="drag_dist_unset">--</string>
-    <string name="pref_drag_distance_cat">Drag Distance</string>
-    <string name="pref_drag_dist_max_title">Maximum Drag Distance</string>
+    <string name="pref_drag_distance_cat">Haul Distance</string>
+    <string name="pref_drag_dist_max_title">Maximum Haul Distance</string>
     <string name="tts_operating_hook">Operating hook</string>
+    <string name="menu_test">Test</string>
+    <string name="toast_release_line_5sec">Release the line within 5 seconds.</string>
+    <string name="tts_release_line_5sec">Ensure that the line is released. You have 5 seconds.</string>
 
+    <string name="lbl_drag_speed_wheel">Haul Speed (%s)</string>
+    <string name="lbl_return_speed_wheel">Return Speed (%s)</string>
+    <string name="cvt_kph">%.1f km/h</string>
+    <string name="cvt_mph">%.1f mph</string>
 </resources>

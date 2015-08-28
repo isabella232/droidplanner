@@ -21,11 +21,20 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import com.o3dr.services.android.lib.coordinate.LatLong;
+import com.o3dr.services.android.lib.coordinate.LatLongAlt;
+import com.o3dr.services.android.lib.drone.mission.Mission;
+import com.o3dr.services.android.lib.drone.mission.item.spatial.Waypoint;
+import com.o3dr.services.android.lib.util.MathUtils;
+
+import org.droidplanner.android.DroidPlannerApp;
 import org.droidplanner.android.R;
 import org.droidplanner.android.activities.helpers.SuperUI;
+import org.droidplanner.android.aerokontiki.AeroKontiki;
 import org.droidplanner.android.fragments.SettingsFragment;
 import org.droidplanner.android.fragments.actionbar.ActionBarTelemFragment;
 import org.droidplanner.android.fragments.control.BaseFlightControlFragment;
+import org.droidplanner.android.proxy.mission.MissionProxy;
 import org.droidplanner.android.widgets.SlidingDrawer;
 
 /**
@@ -181,6 +190,35 @@ public abstract class DrawerNavigationUI extends SuperUI implements SlidingDrawe
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        if(item.getItemId() == R.id.menu_test) {
+            final LatLong llhere = AeroKontiki.getMyLocation();
+            final LatLong llthere = new LatLong(38.640619, -94.342858);
+            double distance = MathUtils.getDistance2D(llhere, llthere);
+            double scale = (double)(10.0 / distance);
+
+            final LatLong mid = AeroKontiki.midPoint(llhere, llthere, scale);
+
+            final MissionProxy missionProxy = DroidPlannerApp.get().getMissionProxy();
+            final Mission mission = new Mission();
+
+            int idx = 0;
+            Waypoint p = new Waypoint();
+            p.setCoordinate(new LatLongAlt(llhere.getLatitude(), llhere.getLongitude(), 50));
+            mission.addMissionItem(idx++, p);
+
+            p = new Waypoint();
+            p.setCoordinate(new LatLongAlt(mid.getLatitude(), mid.getLongitude(), 50));
+            mission.addMissionItem(idx++, p);
+
+            p = new Waypoint();
+            p.setCoordinate(new LatLongAlt(llthere.getLatitude(), llthere.getLongitude(), 50));
+            mission.addMissionItem(idx++, p);
+
+            missionProxy.load(mission);
+
+            return true;
+        }
+
         // Pass the event to ActionBarDrawerToggle, if it returns
         // true, then it has handled the app icon touch event
         if (mDrawerToggle.onOptionsItemSelected(item)) {
