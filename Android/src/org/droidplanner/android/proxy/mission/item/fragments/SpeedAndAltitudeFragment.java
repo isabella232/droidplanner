@@ -52,7 +52,8 @@ public class SpeedAndAltitudeFragment extends Fragment {
     static final int MIN_ALTITUDE = 10;
     static final int MAX_ALTITUDE = 100;
     static final int MIN_SPEED = 2;
-    static final int MAX_SPEED = 25;
+    static final int MAX_HAUL_SPEED = 10;
+    static final int MAX_RETURN_SPEED = 15;
 
     private final CardWheelHorizontalView.OnCardWheelScrollListener<SpeedUnit> mSpeedScrollListener = new CardWheelHorizontalView.OnCardWheelScrollListener<SpeedUnit>() {
         public void onScrollingStarted(CardWheelHorizontalView cardWheel, SpeedUnit startValue) { }
@@ -208,16 +209,20 @@ public class SpeedAndAltitudeFragment extends Fragment {
         mTakeoffAltitudePicker = (CardWheelHorizontalView<LengthUnit>)view.findViewById(R.id.pick_takeoff_altitude);
         mDropAltitudePicker = (CardWheelHorizontalView<LengthUnit>)view.findViewById(R.id.pick_drop_altitude);
 
-        final SpeedWheelAdapter adapter = new SpeedWheelAdapter(context, R.layout.wheel_text_centered,
-            speedUnitProvider.boxBaseValueToTarget(MIN_SPEED), speedUnitProvider.boxBaseValueToTarget(MAX_SPEED));
-        mDragSpeedPicker.setViewAdapter(adapter);
-        mDragSpeedPicker.addScrollListener(mSpeedScrollListener);
+        final SpeedWheelAdapter haulSpeedAdapter = new SpeedWheelAdapter(context, R.layout.wheel_text_centered,
+            speedUnitProvider.boxBaseValueToTarget(MIN_SPEED), speedUnitProvider.boxBaseValueToTarget(MAX_HAUL_SPEED));
 
-        mReturnSpeedPicker.setViewAdapter(adapter);
-        mReturnSpeedPicker.addScrollListener(mSpeedScrollListener);
+        final SpeedWheelAdapter returnSpeedAdapter = new SpeedWheelAdapter(context, R.layout.wheel_text_centered,
+            speedUnitProvider.boxBaseValueToTarget(MIN_SPEED), speedUnitProvider.boxBaseValueToTarget(MAX_RETURN_SPEED));
 
         final LengthWheelAdapter altitudeAdapter = new LengthWheelAdapter(context, R.layout.wheel_text_centered,
             lengthUnitProvider.boxBaseValueToTarget(MIN_ALTITUDE), lengthUnitProvider.boxBaseValueToTarget(MAX_ALTITUDE));
+
+        mDragSpeedPicker.setViewAdapter(haulSpeedAdapter);
+        mDragSpeedPicker.addScrollListener(mSpeedScrollListener);
+
+        mReturnSpeedPicker.setViewAdapter(returnSpeedAdapter);
+        mReturnSpeedPicker.addScrollListener(mSpeedScrollListener);
 
         mTakeoffAltitudePicker.setViewAdapter(altitudeAdapter);
         mTakeoffAltitudePicker.addScrollListener(mAltitudeScrollListener);
@@ -230,7 +235,7 @@ public class SpeedAndAltitudeFragment extends Fragment {
 
         final DroidPlannerPrefs prefs = DroidPlannerApp.get().getAppPreferences();
 
-        mTakeoffAltitudePicker.setCurrentValue(lengthUnitProvider.boxBaseValueToTarget(prefs.getDefaultDragAltitude()));
+        mTakeoffAltitudePicker.setCurrentValue(lengthUnitProvider.boxBaseValueToTarget(prefs.getDefaultDropAltitude()));
         mDragSpeedPicker.setCurrentValue(speedUnitProvider.boxBaseValueToTarget(prefs.getDefaultDragSpeed()));
         mReturnSpeedPicker.setCurrentValue(speedUnitProvider.boxBaseValueToTarget(prefs.getDefaultReturnSpeed()));
 

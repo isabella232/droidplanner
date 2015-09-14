@@ -189,13 +189,13 @@ public class FlightActivity extends DrawerNavigationUI
 
         @Override
         public void onTakeoffAltitudeSet(double alt) {
-            DroidPlannerApp.get().getAppPreferences().setDefaultTakeoffAltitude((int)alt);
+            DroidPlannerApp.get().getAppPreferences().setDefaultHaulAltitude((int) alt);
         }
 
         @Override
         public void onDropAltitudeSet(double alt) {
             Log.v(TAG, "onAltitudeSet(): alt=" + alt);
-            DroidPlannerApp.get().getAppPreferences().setDefaultDragAltitude((int) alt);
+            DroidPlannerApp.get().getAppPreferences().setDefaultDropAltitude((int) alt);
         }
 
         @Override

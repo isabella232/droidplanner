@@ -481,35 +481,35 @@ public class DroidPlannerPrefs {
 	}
 
 	// Kontiki
-	public int getDefaultDragAltitude() {
+	public int getDefaultDropAltitude() {
 		return prefs.getInt(PREF_DRAG_ALTITUDE, DEFAULT_DRAG_ALTITUDE);
 	}
 
-	public void setDefaultDragAltitude(int value) {
-		prefs.edit().putInt(PREF_DRAG_ALTITUDE, value).apply();
+	public void setDefaultDropAltitude(int value) {
+		prefs.edit().putInt(PREF_DRAG_ALTITUDE, value).commit();
 	}
 
 	public int getDefaultDragSpeed() {
 		return prefs.getInt(PREF_DRAG_SPEED, DEFAULT_DRAG_SPEED);
 	}
 
-	public void setDefaultDragSpeed(int value) { prefs.edit().putInt(PREF_DRAG_SPEED, value).apply(); }
+	public void setDefaultDragSpeed(int value) { prefs.edit().putInt(PREF_DRAG_SPEED, value).commit(); }
 
 	public int getDefaultReturnSpeed() {
 		return prefs.getInt(PREF_RETURN_SPEED, DEFAULT_RETURN_SPEED);
 	}
 
 	public void setDefaultReturnSpeed(int speed) {
-		prefs.edit().putInt(PREF_RETURN_SPEED, speed).apply();
+		prefs.edit().putInt(PREF_RETURN_SPEED, speed).commit();
 	}
 
-	public int getDefaultTakeoffAltitude() { return prefs.getInt(PREF_TO_ALTITUDE, DEFAULT_TO_ALTITUDE); }
+	public int getDefaultHaulAltitude() { return prefs.getInt(PREF_TO_ALTITUDE, DEFAULT_TO_ALTITUDE); }
 
-	public void setDefaultTakeoffAltitude(int alt) {
-		prefs.edit().putInt(PREF_TO_ALTITUDE, alt).apply();
+	public void setDefaultHaulAltitude(int alt) {
+		prefs.edit().putInt(PREF_TO_ALTITUDE, alt).commit();
 	}
 
 	public int getMaxDragDistance() { return prefs.getInt(PREF_MAX_DRAG_DIST, DEFAULT_MAX_DRAG_DIST); }
 
-	public void setMaxDragDistance(int max) { prefs.edit().putInt(PREF_MAX_DRAG_DIST, max).apply(); }
+	public void setMaxDragDistance(int max) { prefs.edit().putInt(PREF_MAX_DRAG_DIST, max).commit(); }
 }

@@ -112,7 +112,7 @@ public class AeroKontiki {
 
             final DroidPlannerPrefs prefs = DroidPlannerApp.get().getAppPreferences();
             int dragSpeed = prefs.getDefaultDragSpeed();
-            int dragHeight = prefs.getDefaultDragAltitude();
+            int dragHeight = prefs.getDefaultDropAltitude();
 
             final LatLong here = home.getPosition();
 
@@ -163,8 +163,8 @@ public class AeroKontiki {
 
         final DroidPlannerPrefs prefs = DroidPlannerApp.get().getAppPreferences();
 
-        final int takeoffAlt = prefs.getDefaultTakeoffAltitude();
-        final int dragAlt = prefs.getDefaultDragAltitude();
+        final int takeoffAlt = prefs.getDefaultHaulAltitude();
+        final int dragAlt = prefs.getDefaultDropAltitude();
         final int dragSpeed = prefs.getDefaultDragSpeed();
         final int retSpeed = prefs.getDefaultReturnSpeed();
 
@@ -190,17 +190,19 @@ public class AeroKontiki {
         to.setTakeoffAltitude((homeValid)? 2: takeoffAlt);
         output.add(to);
 
+        LatLong there = null;
+
         if(homeValid) {
             Waypoint pause = new Waypoint();
 
-            final LatLong there = new LatLong(
+            there = new LatLong(
                 dropPoint.getCoordinate().getLatitude(),
                 dropPoint.getCoordinate().getLongitude());
 
             // We want a pause waypoint 10 meters out from here. Calculate a scale
             // based on how much of the total distance our fly-out distance is.
             double distance = MathUtils.getDistance2D(home.getPosition(), there);
-            double leanOutMeters = (takeoffAlt / 1.5);
+            double leanOutMeters = (takeoffAlt / 2);
             double scale = (leanOutMeters / distance);
 
             if(scale > 0.5) {
@@ -219,14 +221,32 @@ public class AeroKontiki {
         speed.setSpeed(dragSpeed);
         output.add(speed);
 
+        // Add a "plateau" waypoint that holds the drag altitude until well into the mission.
+        // The idea here is to drop at a 45-degree angle from cruise altitude, down to drop altitude.
+        final double dropAlt = (dropPoint != null)? dropPoint.getCoordinate().getAltitude(): 0;
+
+        // If we have home and drop-point alt is valid AND lower than takeoff altitude
+        if(homeValid && (dropAlt > 0) && (dropAlt < takeoffAlt)) {
+            final double distance = MathUtils.getDistance2D(home.getPosition(), there);
+
+            double angleDownMeters = ((takeoffAlt - dropAlt) / 2);
+            Log.v(TAG, "angleDownMeters=" + angleDownMeters);
+
+            // Avoid creating the plateau if the angle-down phase is >= 1/2 of the total distance.
+            if(angleDownMeters <= (distance / 2)) {
+                final double scale = (1 - (angleDownMeters / distance));
+
+                LatLong mid = midPoint(home.getPosition(), there, scale);
+
+                Waypoint plateau = new Waypoint();
+                plateau.setCoordinate(new LatLongAlt(mid.getLatitude(), mid.getLongitude(), (double) takeoffAlt));
+                output.add(plateau);
+            }
+        }
+
         // Fly to the destination
         dropPoint.setDelay(2);
         output.add(dropPoint);
-
-        // Drop the line
-//        EpmGripper open = new EpmGripper();
-//        open.setRelease(true);
-//        output.add(open);
 
         // Replaced the above with this
         SetServo servoOpen = new SetServo();
@@ -237,10 +257,6 @@ public class AeroKontiki {
         Waypoint waitForDrop = new Waypoint(dropPoint);
         waitForDrop.setDelay(2);
         output.add(waitForDrop);
-
-//        EpmGripper closeGripper = new EpmGripper();
-//        closeGripper.setRelease(false);
-//        output.add(closeGripper);
 
         // Replaced the above with this:
         SetServo servoClose = new SetServo();
@@ -271,6 +287,32 @@ public class AeroKontiki {
     }
 
     public static void onMissionCanceled(final Context context, Handler handler) {
+        final Drone drone = DroidPlannerApp.get().getDrone();
+        final State droneState = drone.getAttribute(AttributeType.STATE);
+        final Gps location = drone.getAttribute(AttributeType.GPS);
+        final Home home = drone.getAttribute(AttributeType.HOME);
+
+        if(droneState.isFlying()) {
+            openHook(drone);
+            double distance = MathUtils.getDistance2D(location.getPosition(), new LatLong(home.getCoordinate().getLatitude(), home.getCoordinate().getLongitude()));
+            final VehicleMode mode = (distance <= 5)? VehicleMode.COPTER_LAND: VehicleMode.COPTER_RTL;
+
+            handler.postDelayed(new Runnable() {
+                public void run() {
+                    drone.changeVehicleMode(mode);
+                    LocalBroadcastManager.getInstance(
+                        DroidPlannerApp.get()).sendBroadcast(
+                        new Intent(AeroKontiki.EVENT_SPEAK)
+                            .putExtra(AeroKontiki.EXTRA_DATA, context.getString(R.string.tts_mission_aborted)));
+                }
+            }, 1000);
+        }
+        else if(droneState.isArmed()) {
+            drone.arm(false);
+        }
+    }
+
+    public static void onMissionCanceledBrakeMode(final Context context, Handler handler) {
         final Drone drone = DroidPlannerApp.get().getDrone();
         final State droneState = drone.getAttribute(AttributeType.STATE);
         final Gps location = drone.getAttribute(AttributeType.GPS);
