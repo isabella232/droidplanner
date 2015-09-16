@@ -54,6 +54,8 @@ public class AeroKontiki {
     public static final String EVENT_DISCONNECTED = "com.aerokoniki.apps.android.event.DISCONNECTED";
     public static final String EVENT_MARKER_MOVING = "com.aerokontiki.apps.android.event.MARKER_MOVING";
 
+    public static final int TAKEOFF_ANGLE_MIN = 90;
+
     public static final String EXTRA_DATA = "_data_";
 
     public static final int SERVO_HOOK_CHANNEL = 9;
@@ -154,7 +156,15 @@ public class AeroKontiki {
         return l;
     }
 
-    /** Update the mission so it contains more useful waypoints. */
+    public static int computeTakeoffAngleFromProgress(int in) {
+        return (TAKEOFF_ANGLE_MIN - in);
+    }
+
+    public static int computeProgressFromTakeoffAngle(int angle) {
+        return 0;
+    }
+
+    /** Update the mission so it contains the actual waypoints. */
     public static void massageMission(MissionProxy missionProxy) {
         final Drone drone = DroidPlannerApp.get().getDrone();
         final Gps home = drone.getAttribute(AttributeType.GPS);
@@ -182,37 +192,48 @@ public class AeroKontiki {
         }
 
         final boolean homeValid = (home != null && home.isValid());
+        // This is just the progress value of the slider. If 0, no angle waypoint is needed.
+        final int anglePref = prefs.getTakeoffAngle();
+        final boolean doAngleWp = (homeValid && (anglePref > 0));
 
-        // Takeoff. If home is valid, we'll set a "pull out" waypoint
-        // 10 meters forward of the takeoff point. If we can't do that,
-        // we'll just take off to the drag altitude.
+        // Takeoff. If home is valid AND our prefs say we want a takeoff angle, set a "pull out" waypoint
+        // forward of the takeoff point. If we can't do that, just take off to the drag altitude.
         Takeoff to = new Takeoff();
-        to.setTakeoffAltitude((homeValid)? 2: takeoffAlt);
+        to.setTakeoffAltitude(doAngleWp? 2: takeoffAlt);
         output.add(to);
 
-        LatLong there = null;
+        final LatLong there = new LatLong(
+            dropPoint.getCoordinate().getLatitude(),
+            dropPoint.getCoordinate().getLongitude());
+            ;
 
-        if(homeValid) {
+        final double distance = MathUtils.getDistance2D(home.getPosition(), there);
+
+        if(doAngleWp) {
             Waypoint pause = new Waypoint();
 
-            there = new LatLong(
-                dropPoint.getCoordinate().getLatitude(),
-                dropPoint.getCoordinate().getLongitude());
-
-            // We want a pause waypoint 10 meters out from here. Calculate a scale
+            // We want a pause waypoint "n" meters out from here. Calculate a scale
             // based on how much of the total distance our fly-out distance is.
-            double distance = MathUtils.getDistance2D(home.getPosition(), there);
-            double leanOutMeters = (takeoffAlt / 2);
-            double scale = (leanOutMeters / distance);
+            double angleScale = (anglePref / (double)(TAKEOFF_ANGLE_MIN / 2));
 
-            if(scale > 0.5) {
-                scale = 0.1;
+            // 0.5 would give 45 degrees
+            double leanOutMeters = (takeoffAlt * angleScale);
+            double distScale = (leanOutMeters / distance);
+            if(Double.isInfinite(distScale)) {
+                Log.w(TAG, "distScale is infinite");
+                distScale = 0.01;
             }
 
-            LatLong mid = midPoint(home.getPosition(), there, scale);
+            Log.v(TAG, "anglePref=" + anglePref + " angleScale=" + angleScale + " distScale=" + distScale);
+
+            if(distScale > 0.5) {
+                distScale = 0.1;
+            }
+
+            LatLong mid = midPoint(home.getPosition(), there, distScale);
             pause.setCoordinate(new LatLongAlt(mid.getLatitude(), mid.getLongitude(), (double)takeoffAlt));
 
-            pause.setDelay(3);
+            pause.setDelay(2);
             output.add(pause);
         }
 
@@ -226,9 +247,7 @@ public class AeroKontiki {
         final double dropAlt = (dropPoint != null)? dropPoint.getCoordinate().getAltitude(): 0;
 
         // If we have home and drop-point alt is valid AND lower than takeoff altitude
-        if(homeValid && (dropAlt > 0) && (dropAlt < takeoffAlt)) {
-            final double distance = MathUtils.getDistance2D(home.getPosition(), there);
-
+        if(home.isValid() && (dropAlt > 0) && (dropAlt < takeoffAlt)) {
             double angleDownMeters = ((takeoffAlt - dropAlt) / 2);
             Log.v(TAG, "angleDownMeters=" + angleDownMeters);
 

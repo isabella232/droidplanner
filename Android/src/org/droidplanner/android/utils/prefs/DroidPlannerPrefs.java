@@ -168,6 +168,9 @@ public class DroidPlannerPrefs {
 	public static final String PREF_MAX_DRAG_DIST = "pref_drag_dist_max_value";
 	public static final int DEFAULT_MAX_DRAG_DIST = 500;
 
+	public static final String PREF_TAKEOFF_ANGLE = "pref_takeoff_angle";
+	public static final int DEFAULT_TAKEOFF_ANGLE = 23;
+
 	// Public for legacy usage
 	public SharedPreferences prefs;
 
@@ -512,4 +515,8 @@ public class DroidPlannerPrefs {
 	public int getMaxDragDistance() { return prefs.getInt(PREF_MAX_DRAG_DIST, DEFAULT_MAX_DRAG_DIST); }
 
 	public void setMaxDragDistance(int max) { prefs.edit().putInt(PREF_MAX_DRAG_DIST, max).commit(); }
+
+	public void setTakeoffAngle(int angle) { prefs.edit().putInt(PREF_TAKEOFF_ANGLE, angle).commit(); }
+
+	public int getTakeoffAngle() { return prefs.getInt(PREF_TAKEOFF_ANGLE, DEFAULT_TAKEOFF_ANGLE); }
 }

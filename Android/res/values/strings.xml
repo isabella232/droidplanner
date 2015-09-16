@@ -478,4 +478,7 @@
     <string name="lbl_return_speed_wheel">Return Speed (%s)</string>
     <string name="cvt_kph">%.1f km/h</string>
     <string name="cvt_mph">%.1f mph</string>
+
+    <string name="txt_takeoff_angle">Takeoff Angle</string>
+    <string name="txt_takeoff_angle_default">90</string>
 </resources>

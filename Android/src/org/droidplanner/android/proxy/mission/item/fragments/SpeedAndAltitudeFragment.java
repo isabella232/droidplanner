@@ -7,6 +7,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.LocalBroadcastManager;
@@ -16,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.widget.Button;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import org.beyene.sius.unit.composition.speed.SpeedUnit;
@@ -40,6 +43,8 @@ import org.droidplanner.android.widgets.spinnerWheel.adapters.SpeedWheelAdapter;
  */
 public class SpeedAndAltitudeFragment extends Fragment {
     static final String TAG = SpeedAndAltitudeFragment.class.getSimpleName();
+
+    private static final int MSG_UPDATE_TAKEOFF_ANGLE = 101;
 
     public interface Listener {
         void onMissionCanceled();
@@ -166,6 +171,39 @@ public class SpeedAndAltitudeFragment extends Fragment {
         }
     };
 
+    private final SeekBar.OnSeekBarChangeListener mSeekChangeListener = new SeekBar.OnSeekBarChangeListener() {
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            if(fromUser) {
+                mHandler.removeMessages(MSG_UPDATE_TAKEOFF_ANGLE);
+                Message m = mHandler.obtainMessage(MSG_UPDATE_TAKEOFF_ANGLE, progress);
+                m.arg1 = progress;
+                mHandler.sendMessageDelayed(m, 500);
+            }
+
+            mTakeoffAngleText.setText(String.format("%d", AeroKontiki.computeTakeoffAngleFromProgress(progress)));
+        }
+
+        public void onStartTrackingTouch(SeekBar seekBar) { }
+        public void onStopTrackingTouch(SeekBar seekBar) { }
+    };
+
+    private final Handler mHandler = new android.os.Handler(new Handler.Callback() {
+        @Override
+        public boolean handleMessage(Message msg) {
+            switch(msg.what) {
+                case MSG_UPDATE_TAKEOFF_ANGLE: {
+                    int progress = msg.arg1;
+                    DroidPlannerApp.get().getAppPreferences().setTakeoffAngle(progress);
+                    return true;
+                }
+
+                default: {
+                    return false;
+                }
+            }
+        }
+    });
 
     private LengthUnitProvider lengthUnitProvider;
     private AreaUnitProvider areaUnitProvider;
@@ -179,6 +217,8 @@ public class SpeedAndAltitudeFragment extends Fragment {
     private CardWheelHorizontalView<LengthUnit> mTakeoffAltitudePicker;
     private CardWheelHorizontalView<LengthUnit> mDropAltitudePicker;
     private Button mCancelFlightButton;
+    private SeekBar mSeekTakeoffAngle;
+    private TextView mTakeoffAngleText;
 
     private Listener mListener;
 
@@ -199,6 +239,11 @@ public class SpeedAndAltitudeFragment extends Fragment {
         final Context context = DroidPlannerApp.get();
 
         initProviders(context);
+
+        mSeekTakeoffAngle = (SeekBar)view.findViewById(R.id.seek_takeoff_angle);
+        mSeekTakeoffAngle.setOnSeekBarChangeListener(mSeekChangeListener);
+
+        mTakeoffAngleText = (TextView)view.findViewById(R.id.txt_takeoff_angle);
 
         mDistanceLayout = view.findViewById(R.id.layout_drag_distance);
         mDistanceText = (TextView)view.findViewById(R.id.txt_drag_distance);
@@ -241,6 +286,10 @@ public class SpeedAndAltitudeFragment extends Fragment {
 
         setSpeedText(mDragSpeedPicker, R.string.lbl_drag_speed_wheel, speedUnitProvider.boxBaseValueToTarget(prefs.getDefaultDragSpeed()).getValue());
         setSpeedText(mReturnSpeedPicker, R.string.lbl_return_speed_wheel, speedUnitProvider.boxBaseValueToTarget(prefs.getDefaultReturnSpeed()).getValue());
+
+        final int progress = prefs.getTakeoffAngle();
+        mSeekTakeoffAngle.setProgress(progress);
+        mTakeoffAngleText.setText(String.format("%d", AeroKontiki.computeTakeoffAngleFromProgress(progress)));
 
         showView(mWheelLayout, false);
         showView(mCancelFlightButton, false);

@@ -16,7 +16,6 @@
             android:id="@+id/layout_drag_distance"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="6dip"
             android:padding="4dip"
             android:orientation="horizontal"
             android:background="@color/layout_drag_distance_normal"
@@ -39,6 +38,45 @@
                 android:textColor="@android:color/white"
                 android:text="@string/drag_dist_unset"
                 />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layout_takeoff_angle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="4dip"
+            android:background="@color/layout_drag_distance_normal"
+            >
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/txt_takeoff_angle"
+                android:textColor="@android:color/white"
+                />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="4dip"
+                >
+                <SeekBar
+                    android:id="@+id/seek_takeoff_angle"
+                    android:layout_width="0dip"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:max="45"
+                    />
+
+                <TextView
+                    android:id="@+id/txt_takeoff_angle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/txt_takeoff_angle_default"
+                    android:textColor="@android:color/white"
+                    />
+            </LinearLayout>
         </LinearLayout>
 
         <org.droidplanner.android.widgets.spinnerWheel.CardWheelHorizontalView
@@ -76,6 +114,7 @@
             android:text="@string/lbl_return_speed"
             style="@style/missionItemDetailCard"
             />
+
     </LinearLayout>
 
     <Button
