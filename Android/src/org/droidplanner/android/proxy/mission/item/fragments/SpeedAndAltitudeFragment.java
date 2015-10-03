@@ -6,20 +6,28 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.LocalBroadcastManager;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.beyene.sius.unit.composition.speed.SpeedUnit;
 import org.beyene.sius.unit.impl.FactorySpeed;
@@ -27,6 +35,7 @@ import org.beyene.sius.unit.length.LengthUnit;
 import org.droidplanner.android.DroidPlannerApp;
 import org.droidplanner.android.R;
 import org.droidplanner.android.aerokontiki.AeroKontiki;
+import org.droidplanner.android.aerokontiki.LaunchProfile;
 import org.droidplanner.android.utils.prefs.DroidPlannerPrefs;
 import org.droidplanner.android.utils.unit.UnitManager;
 import org.droidplanner.android.utils.unit.providers.area.AreaUnitProvider;
@@ -38,6 +47,9 @@ import org.droidplanner.android.widgets.spinnerWheel.CardWheelHorizontalView;
 import org.droidplanner.android.widgets.spinnerWheel.adapters.LengthWheelAdapter;
 import org.droidplanner.android.widgets.spinnerWheel.adapters.SpeedWheelAdapter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by kellys on 8/5/15.
  */
@@ -48,9 +60,9 @@ public class SpeedAndAltitudeFragment extends Fragment {
 
     public interface Listener {
         void onMissionCanceled();
-        void onDragSpeedSet(double speed);
+        void onHaulSpeedSet(double speed);
         void onReturnSpeedSet(double speed);
-        void onTakeoffAltitudeSet(double alt);
+        void onHaulAltitudeSet(double alt);
         void onDropAltitudeSet(double alt);
     }
 
@@ -66,11 +78,13 @@ public class SpeedAndAltitudeFragment extends Fragment {
 
         @Override
         public void onScrollingEnded(CardWheelHorizontalView cardWheel, SpeedUnit startValue, SpeedUnit endValue) {
+            updateControlsFrom(null);
+
             switch (cardWheel.getId()) {
                 case R.id.pick_drag_speed: {
                     double baseValue = endValue.toBase().getValue();
                     if(mListener != null) {
-                        mListener.onDragSpeedSet(baseValue);
+                        mListener.onHaulSpeedSet(baseValue);
                     }
 
                     setSpeedText(cardWheel, R.string.lbl_drag_speed_wheel, baseValue);
@@ -96,11 +110,13 @@ public class SpeedAndAltitudeFragment extends Fragment {
 
         @Override
         public void onScrollingEnded(CardWheelHorizontalView cardWheel, LengthUnit startValue, LengthUnit endValue) {
+            updateControlsFrom(null);
+
             switch (cardWheel.getId()) {
                 case R.id.pick_takeoff_altitude: {
                     double baseValue = endValue.toBase().getValue();
                     if(mListener != null) {
-                        mListener.onTakeoffAltitudeSet(baseValue);
+                        mListener.onHaulAltitudeSet(baseValue);
                     }
                     break;
                 }
@@ -125,22 +141,20 @@ public class SpeedAndAltitudeFragment extends Fragment {
             switch(action) {
                 case AeroKontiki.EVENT_CONNECTED:
                 case AeroKontiki.EVENT_DISARMED: {
-                    showView(mWheelLayout, true);
                     showView(mCancelFlightButton, false);
                     break;
                 }
 
                 case AeroKontiki.EVENT_ARMED:
                 case AeroKontiki.EVENT_FLYING: {
-                    showView(mWheelLayout, false);
-                    showView(mDistanceLayout, false);
+                    onCloseTabs();
                     showView(mCancelFlightButton, true);
                     break;
                 }
 
                 case AeroKontiki.EVENT_MISSION_SENT: {
                     showView(mDistanceLayout, false);
-                    showView(mWheelLayout, false);
+                    onCloseTabs();
                     showView(mCancelFlightButton, false);
                     break;
                 }
@@ -148,7 +162,6 @@ public class SpeedAndAltitudeFragment extends Fragment {
                 case AeroKontiki.EVENT_DISCONNECTED:
                 case AeroKontiki.EVENT_POINT_DROPPED: {
                     boolean dropped = AeroKontiki.EVENT_POINT_DROPPED.equals(action);
-                    showView(mWheelLayout, dropped);
                     showView(mDistanceLayout, dropped);
                     showView(mCancelFlightButton, false);
                     break;
@@ -167,6 +180,26 @@ public class SpeedAndAltitudeFragment extends Fragment {
                     onCancelFlightClick(v);
                     break;
                 }
+
+                case R.id.btn_save_profile: {
+                    onSaveProfileClick(v);
+                    break;
+                }
+
+                case R.id.button_controls: {
+                    onShowControls();
+                    break;
+                }
+
+                case R.id.button_profiles: {
+                    onShowProfiles();
+                    break;
+                }
+
+                case R.id.btn_close: {
+                    onCloseTabs();
+                    break;
+                }
             }
         }
     };
@@ -179,6 +212,10 @@ public class SpeedAndAltitudeFragment extends Fragment {
                 Message m = mHandler.obtainMessage(MSG_UPDATE_TAKEOFF_ANGLE, progress);
                 m.arg1 = progress;
                 mHandler.sendMessageDelayed(m, 500);
+
+                if(fromUser) {
+                    updateControlsFrom(null);
+                }
             }
 
             mTakeoffAngleText.setText(String.format("%d", AeroKontiki.computeTakeoffAngleFromProgress(progress)));
@@ -186,6 +223,23 @@ public class SpeedAndAltitudeFragment extends Fragment {
 
         public void onStartTrackingTouch(SeekBar seekBar) { }
         public void onStopTrackingTouch(SeekBar seekBar) { }
+    };
+
+    private final AdapterView.OnItemClickListener mItemClickListener = new AdapterView.OnItemClickListener() {
+        @Override
+        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            LaunchProfile item = (LaunchProfile)parent.getAdapter().getItem(position);
+            updateControlsFrom(item);
+        }
+    };
+
+    private final AdapterView.OnItemLongClickListener mLongClickListener = new AdapterView.OnItemLongClickListener() {
+        @Override
+        public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+            LaunchProfile item = (LaunchProfile)parent.getAdapter().getItem(position);
+            onDeleteItem(item);
+            return false;
+        }
     };
 
     private final Handler mHandler = new android.os.Handler(new Handler.Callback() {
@@ -212,15 +266,22 @@ public class SpeedAndAltitudeFragment extends Fragment {
     private View mWheelLayout;
     private TextView mDistanceText;
     private View mDistanceLayout;
-    private CardWheelHorizontalView<SpeedUnit> mDragSpeedPicker;
+    private CardWheelHorizontalView<SpeedUnit> mHaulSpeedPicker;
     private CardWheelHorizontalView<SpeedUnit> mReturnSpeedPicker;
-    private CardWheelHorizontalView<LengthUnit> mTakeoffAltitudePicker;
+    private CardWheelHorizontalView<LengthUnit> mHaulAltitudePicker;
     private CardWheelHorizontalView<LengthUnit> mDropAltitudePicker;
     private Button mCancelFlightButton;
     private SeekBar mSeekTakeoffAngle;
     private TextView mTakeoffAngleText;
+    private View mProfilesLayout;
+    private ListView mListView;
+    private View mSaveButton;
+    private View mCloseTabsButton;
+    private LaunchProfile mSelectedLaunchProfile;
 
     private Listener mListener;
+
+    private final ArrayList<LaunchProfile> mProfiles = new ArrayList<>();
 
     public void setListener(Listener listener) {
         mListener = listener;
@@ -232,11 +293,32 @@ public class SpeedAndAltitudeFragment extends Fragment {
         return inflater.inflate(R.layout.fragment_speed_altitude, null, false);
     }
 
+    void updateControlsFrom(LaunchProfile item) {
+        mSelectedLaunchProfile = item;
+
+        if(item != null) {
+            mSeekTakeoffAngle.setProgress(item.takeoffAngle);
+            mHaulAltitudePicker.setCurrentValue(lengthUnitProvider.boxBaseValueToTarget(item.haulAltitude));
+            mDropAltitudePicker.setCurrentValue(lengthUnitProvider.boxBaseValueToTarget(item.dropAltitude));
+            mHaulSpeedPicker.setCurrentValue(speedUnitProvider.boxBaseValueToTarget(item.haulSpeed));
+            mReturnSpeedPicker.setCurrentValue(speedUnitProvider.boxBaseValueToTarget(item.returnSpeed));
+
+            mListener.onHaulSpeedSet(item.haulSpeed);
+            mListener.onHaulAltitudeSet(item.haulAltitude);
+            mListener.onDropAltitudeSet(item.dropAltitude);
+            mListener.onReturnSpeedSet(item.returnSpeed);
+        }
+
+        ((ArrayAdapter<?>)mListView.getAdapter()).notifyDataSetChanged();
+    }
+
     @Override
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
         final Context context = DroidPlannerApp.get();
+
+        mProfilesLayout = view.findViewById(R.id.layout_profiles);
 
         initProviders(context);
 
@@ -249,9 +331,9 @@ public class SpeedAndAltitudeFragment extends Fragment {
         mDistanceText = (TextView)view.findViewById(R.id.txt_drag_distance);
 
         mWheelLayout = view.findViewById(R.id.layout_wheels);
-        mDragSpeedPicker = (CardWheelHorizontalView<SpeedUnit>)view.findViewById(R.id.pick_drag_speed);
+        mHaulSpeedPicker = (CardWheelHorizontalView<SpeedUnit>)view.findViewById(R.id.pick_drag_speed);
         mReturnSpeedPicker = (CardWheelHorizontalView<SpeedUnit>)view.findViewById(R.id.pick_return_speed);
-        mTakeoffAltitudePicker = (CardWheelHorizontalView<LengthUnit>)view.findViewById(R.id.pick_takeoff_altitude);
+        mHaulAltitudePicker = (CardWheelHorizontalView<LengthUnit>)view.findViewById(R.id.pick_takeoff_altitude);
         mDropAltitudePicker = (CardWheelHorizontalView<LengthUnit>)view.findViewById(R.id.pick_drop_altitude);
 
         final SpeedWheelAdapter haulSpeedAdapter = new SpeedWheelAdapter(context, R.layout.wheel_text_centered,
@@ -263,14 +345,14 @@ public class SpeedAndAltitudeFragment extends Fragment {
         final LengthWheelAdapter altitudeAdapter = new LengthWheelAdapter(context, R.layout.wheel_text_centered,
             lengthUnitProvider.boxBaseValueToTarget(MIN_ALTITUDE), lengthUnitProvider.boxBaseValueToTarget(MAX_ALTITUDE));
 
-        mDragSpeedPicker.setViewAdapter(haulSpeedAdapter);
-        mDragSpeedPicker.addScrollListener(mSpeedScrollListener);
+        mHaulSpeedPicker.setViewAdapter(haulSpeedAdapter);
+        mHaulSpeedPicker.addScrollListener(mSpeedScrollListener);
 
         mReturnSpeedPicker.setViewAdapter(returnSpeedAdapter);
         mReturnSpeedPicker.addScrollListener(mSpeedScrollListener);
 
-        mTakeoffAltitudePicker.setViewAdapter(altitudeAdapter);
-        mTakeoffAltitudePicker.addScrollListener(mAltitudeScrollListener);
+        mHaulAltitudePicker.setViewAdapter(altitudeAdapter);
+        mHaulAltitudePicker.addScrollListener(mAltitudeScrollListener);
 
         mDropAltitudePicker.setViewAdapter(altitudeAdapter);
         mDropAltitudePicker.addScrollListener(mAltitudeScrollListener);
@@ -280,20 +362,38 @@ public class SpeedAndAltitudeFragment extends Fragment {
 
         final DroidPlannerPrefs prefs = DroidPlannerApp.get().getAppPreferences();
 
-        mTakeoffAltitudePicker.setCurrentValue(lengthUnitProvider.boxBaseValueToTarget(prefs.getDefaultDropAltitude()));
-        mDragSpeedPicker.setCurrentValue(speedUnitProvider.boxBaseValueToTarget(prefs.getDefaultDragSpeed()));
+        mHaulAltitudePicker.setCurrentValue(lengthUnitProvider.boxBaseValueToTarget(prefs.getDefaultDropAltitude()));
+        mHaulSpeedPicker.setCurrentValue(speedUnitProvider.boxBaseValueToTarget(prefs.getDefaultDragSpeed()));
         mReturnSpeedPicker.setCurrentValue(speedUnitProvider.boxBaseValueToTarget(prefs.getDefaultReturnSpeed()));
 
-        setSpeedText(mDragSpeedPicker, R.string.lbl_drag_speed_wheel, speedUnitProvider.boxBaseValueToTarget(prefs.getDefaultDragSpeed()).getValue());
+        setSpeedText(mHaulSpeedPicker, R.string.lbl_drag_speed_wheel, speedUnitProvider.boxBaseValueToTarget(prefs.getDefaultDragSpeed()).getValue());
         setSpeedText(mReturnSpeedPicker, R.string.lbl_return_speed_wheel, speedUnitProvider.boxBaseValueToTarget(prefs.getDefaultReturnSpeed()).getValue());
 
         final int progress = prefs.getTakeoffAngle();
         mSeekTakeoffAngle.setProgress(progress);
         mTakeoffAngleText.setText(String.format("%d", AeroKontiki.computeTakeoffAngleFromProgress(progress)));
 
-        showView(mWheelLayout, false);
-        showView(mCancelFlightButton, false);
-        showView(mDistanceLayout, false);
+        mListView = (ListView)view.findViewById(R.id.list);
+        mListView.setOnItemClickListener(mItemClickListener);
+        mListView.setOnItemLongClickListener(mLongClickListener);
+        mListView.setEmptyView(view.findViewById(android.R.id.empty));
+
+        mSaveButton = view.findViewById(R.id.btn_save_profile);
+        mSaveButton.setOnClickListener(mClickListener);
+
+        for(int id: new int[] {
+            R.id.button_controls,
+            R.id.button_profiles,
+            R.id.btn_close
+        }) {
+            view.findViewById(id).setOnClickListener(mClickListener);
+        }
+
+        mCloseTabsButton = view.findViewById(R.id.btn_close);
+
+        final boolean show = true;
+
+        showView(mDistanceLayout, show);
     }
 
     @Override
@@ -310,6 +410,15 @@ public class SpeedAndAltitudeFragment extends Fragment {
         try {
             LocalBroadcastManager.getInstance(DroidPlannerApp.get()).unregisterReceiver(mReceiver);
         } catch(Throwable ex) { /* ok */ }
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        mProfiles.clear();
+        mProfiles.addAll(LaunchProfile.all());
+        loadProfiles(mProfiles);
     }
 
     void initProviders(Context context) {
@@ -339,6 +448,45 @@ public class SpeedAndAltitudeFragment extends Fragment {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     onCancelFlightConfirm();
+                }
+            })
+            .create()
+            .show();
+    }
+
+    void onSaveProfileClick(View v) {
+        final View view = LayoutInflater.from(getActivity()).inflate(R.layout.edit_input, null);
+        final EditText edit = (EditText)view.findViewById(R.id.edit_input);
+        final TextView prompt = (TextView)view.findViewById(R.id.txt_prompt);
+
+        new AlertDialog.Builder(getActivity())
+            .setTitle(R.string.dlg_save_profile_title)
+            .setView(view)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    final String name = edit.getText().toString();
+
+                    if(!TextUtils.isEmpty(name)) {
+                        LaunchProfile profile = new LaunchProfile();
+
+                        profile.name = name;
+                        profile.takeoffAngle = mSeekTakeoffAngle.getProgress();
+                        profile.haulSpeed = mHaulSpeedPicker.getCurrentValue().toBase().getValue();
+                        profile.haulAltitude = mHaulAltitudePicker.getCurrentValue().toBase().getValue();
+                        profile.dropAltitude = mHaulAltitudePicker.getCurrentValue().toBase().getValue();
+                        profile.returnSpeed = mReturnSpeedPicker.getCurrentValue().toBase().getValue();
+
+                        mProfiles.add(profile);
+
+                        if(LaunchProfile.save(mProfiles)) {
+                            loadProfiles(LaunchProfile.all());
+                        }
+                        else {
+                            Toast.makeText(getActivity(), R.string.toast_err_saving_profile, Toast.LENGTH_SHORT).show();
+                        }
+                    }
                 }
             })
             .create()
@@ -391,5 +539,65 @@ public class SpeedAndAltitudeFragment extends Fragment {
         }
 
         wheel.setText(context.getString(stringId, text));
+    }
+
+    void loadProfiles(List<LaunchProfile> list) {
+        final ArrayAdapter<LaunchProfile> adapter = new ArrayAdapter<LaunchProfile>(DroidPlannerApp.get(), android.R.layout.simple_list_item_1, android.R.id.text1, list) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                View v = super.getView(position, convertView, parent);
+                LaunchProfile item = getItem(position);
+                boolean selected = (item.equals(mSelectedLaunchProfile));
+
+                String name = item.name;
+
+                TextView tv = (TextView)v;
+                tv.setText(name);
+
+                tv.setTypeface(null, (selected)? Typeface.BOLD: Typeface.NORMAL);
+                tv.setTextColor((selected)? Color.WHITE: Color.DKGRAY);
+                tv.setBackgroundColor((selected)? Color.DKGRAY: Color.TRANSPARENT);
+
+                return v;
+            }
+        };
+
+        mListView.setAdapter(adapter);
+    }
+
+    void onDeleteItem(final LaunchProfile item) {
+        new AlertDialog.Builder(getActivity())
+            .setIcon(android.R.drawable.ic_dialog_alert)
+            .setTitle(item.name)
+            .setMessage(R.string.dlg_delete_profile_msg)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    mProfiles.remove(item);
+                    LaunchProfile.save(mProfiles);
+                    loadProfiles(mProfiles);
+                }
+            })
+            .create()
+            .show();
+    }
+
+    void onShowControls() {
+        showView(mWheelLayout, true);
+        showView(mProfilesLayout, false);
+        showView(mCloseTabsButton, true);
+    }
+
+    void onShowProfiles() {
+        showView(mWheelLayout, false);
+        showView(mProfilesLayout, true);
+        showView(mCloseTabsButton, true);
+    }
+
+    void onCloseTabs() {
+        showView(mWheelLayout, false);
+        showView(mProfilesLayout, false);
+        showView(mCloseTabsButton, false);
     }
 }

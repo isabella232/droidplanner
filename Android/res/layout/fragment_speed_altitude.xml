@@ -7,39 +7,77 @@
     android:padding="10dip"
     >
     <LinearLayout
+        android:id="@+id/layout_drag_distance"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="4dip"
+        android:orientation="horizontal"
+        android:background="@color/layout_drag_distance_normal"
+        >
+        <TextView
+            android:layout_width="0dip"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/lbl_drag_distance"
+            android:textColor="@android:color/white"
+            />
+
+        <TextView
+            android:id="@+id/txt_drag_distance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:paddingLeft="4dip"
+            android:paddingRight="4dip"
+            android:textColor="@android:color/white"
+            android:text="@string/drag_dist_unset"
+            />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_tabs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        style="@style/TabContent"
+        >
+        <Button
+            android:id="@+id/button_controls"
+            android:layout_width="0dip"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/tab_controls"
+            style="@style/TabButton"
+            />
+
+        <Button
+            android:id="@+id/button_profiles"
+            android:layout_width="0dip"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/tab_profiles"
+            style="@style/TabButton"
+            />
+
+        <Button
+            android:id="@+id/btn_close"
+            android:layout_width="0dip"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/tab_close"
+            android:visibility="gone"
+            style="@style/TabButton"
+            />
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/layout_wheels"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
+        android:visibility="gone"
+        style="@style/TabContent"
         >
-        <LinearLayout
-            android:id="@+id/layout_drag_distance"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="4dip"
-            android:orientation="horizontal"
-            android:background="@color/layout_drag_distance_normal"
-            >
-            <TextView
-                android:layout_width="0dip"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/lbl_drag_distance"
-                android:textColor="@android:color/white"
-                />
-
-            <TextView
-                android:id="@+id/txt_drag_distance"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:paddingLeft="4dip"
-                android:paddingRight="4dip"
-                android:textColor="@android:color/white"
-                android:text="@string/drag_dist_unset"
-                />
-        </LinearLayout>
-
         <LinearLayout
             android:id="@+id/layout_takeoff_angle"
             android:layout_width="match_parent"
@@ -115,6 +153,26 @@
             style="@style/missionItemDetailCard"
             />
 
+        <LinearLayout
+            android:id="@+id/layout_save_profile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="4dip"
+            >
+            <Space
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                />
+
+            <Button
+                android:id="@+id/btn_save_profile"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/btn_save_profile"
+                />
+        </LinearLayout>
     </LinearLayout>
 
     <Button
@@ -126,4 +184,39 @@
         android:visibility="gone"
         style="@style/BigRedButton.Bold"
         />
+
+    <LinearLayout
+        android:id="@+id/layout_profiles"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="8dip"
+        android:background="@color/layout_profiles"
+        android:visibility="gone"
+        style="@style/TabContent"
+        >
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="4dip"
+            android:text="@string/txt_profiles"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            />
+
+        <ListView
+            android:id="@+id/list"
+            android:layout_width="match_parent"
+            android:layout_height="180dip"
+            />
+
+        <TextView
+            android:id="@android:id/empty"
+            android:layout_width="match_parent"
+            android:layout_height="180dip"
+            android:text="@string/txt_no_profiles"
+            android:gravity="center"
+            />
+    </LinearLayout>
 </LinearLayout>
+

@@ -64,11 +64,11 @@
 
         <FrameLayout
             android:id="@+id/layout_speed_alt"
-            android:layout_width="wrap_content"
+            android:layout_width="400dip"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
-            android:layout_centerVertical="true"
-            android:layout_marginLeft="20dip"
+            android:layout_below="@id/actionbar_container"
+            android:layout_marginTop="12dip"
             android:orientation="vertical"
             android:background="#3000"
             android:gravity="center"

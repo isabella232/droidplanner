@@ -492,5 +492,18 @@
         <item name="android:textStyle">bold</item>
     </style>
 
+    <style name="NoProfiles">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">#FF656565</item>
+    </style>
+
+    <style name="TabButton">
+        <item name="android:background">@null</item>
+    </style>
+
+    <style name="TabContent">
+        <item name="android:background">#DDefefef</item>
+    </style>
+
 </resources>
 

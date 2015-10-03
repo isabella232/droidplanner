@@ -481,4 +481,16 @@
 
     <string name="txt_takeoff_angle">Takeoff Angle</string>
     <string name="txt_takeoff_angle_default">90</string>
+
+    <string name="txt_profiles">Profiles:</string>
+    <string name="btn_save_profile">Save Profile</string>
+    <string name="dlg_delete_profile_msg">This profile will be deleted.</string>
+    <string name="toast_err_saving_profile">Unable to save the profile.</string>
+    <string name="txt_prompt_profile_name">Specify a name for the profile.</string>
+    <string name="dlg_save_profile_title">Save Profile</string>
+    <string name="txt_no_profiles">No Profiles. Create a profile by adjusting settings, and press Press <b>Save Profile</b> to create one.</string>
+
+    <string name="tab_controls">Controls</string>
+    <string name="tab_profiles">Profiles</string>
+    <string name="tab_close">Close</string>
 </resources>

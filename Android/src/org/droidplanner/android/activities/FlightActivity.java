@@ -182,24 +182,26 @@ public class FlightActivity extends DrawerNavigationUI
         }
 
         @Override
-        public void onDragSpeedSet(double speed) {
-            Log.v(TAG, "onSpeedSet(): speed=" + speed);
+        public void onHaulSpeedSet(double speed) {
+            Log.v(TAG, "onHaulSpeedSet(): speed=" + speed);
             DroidPlannerApp.get().getAppPreferences().setDefaultDragSpeed((int) speed);
         }
 
         @Override
-        public void onTakeoffAltitudeSet(double alt) {
+        public void onHaulAltitudeSet(double alt) {
+            Log.v(TAG, "onHaulAltitudeSet(): alt=" + alt);
             DroidPlannerApp.get().getAppPreferences().setDefaultHaulAltitude((int) alt);
         }
 
         @Override
         public void onDropAltitudeSet(double alt) {
-            Log.v(TAG, "onAltitudeSet(): alt=" + alt);
+            Log.v(TAG, "onDropAltitudeSet(): alt=" + alt);
             DroidPlannerApp.get().getAppPreferences().setDefaultDropAltitude((int) alt);
         }
 
         @Override
         public void onReturnSpeedSet(double speed) {
+            Log.v(TAG, "onReturnSpeedSet(): speed=" + speed);
             DroidPlannerApp.get().getAppPreferences().setDefaultReturnSpeed((int) speed);
         }
     };
