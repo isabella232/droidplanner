@@ -27,13 +27,12 @@ import com.o3dr.services.android.lib.drone.property.VehicleMode;
 import com.o3dr.services.android.lib.util.MathUtils;
 
 import org.beyene.sius.unit.length.LengthUnit;
-import org.beyene.sius.unit.length.Meter;
 import org.droidplanner.android.R;
+import org.droidplanner.android.aerokontiki.AeroKontiki;
 import org.droidplanner.android.fragments.SettingsFragment;
 import org.droidplanner.android.fragments.helpers.ApiListenerFragment;
 import org.droidplanner.android.utils.analytics.GAUtils;
 import org.droidplanner.android.utils.prefs.DroidPlannerPrefs;
-import org.droidplanner.android.utils.unit.providers.length.LengthUnitProvider;
 import org.droidplanner.android.widgets.spinners.ModeAdapter;
 import org.droidplanner.android.widgets.spinners.SpinnerSelfSelect;
 
@@ -265,7 +264,7 @@ public class ActionBarTelemFragment extends ApiListenerFragment {
         }
 
         if (droneType != lastDroneType) {
-            final List<VehicleMode> flightModes = VehicleMode.getVehicleModePerDroneType(droneType);
+            final List<VehicleMode> flightModes = AeroKontiki.safeCopterModes(droneType, VehicleMode.getVehicleModePerDroneType(droneType));
 
             modeAdapter.clear();
             modeAdapter.addAll(flightModes);
@@ -276,7 +275,10 @@ public class ActionBarTelemFragment extends ApiListenerFragment {
 
         if (isDroneConnected) {
             final State droneState = drone.getAttribute(AttributeType.STATE);
-            flightModeTelem.forcedSetSelection(modeAdapter.getPosition(droneState.getVehicleMode()));
+            int idx = modeAdapter.getPosition(droneState.getVehicleMode());
+            if(idx != -1) {
+                flightModeTelem.forcedSetSelection(idx);
+            }
         }
     }
 

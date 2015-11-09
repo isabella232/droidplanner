@@ -26,6 +26,7 @@ import com.o3dr.services.android.lib.drone.mission.item.spatial.Waypoint;
 import com.o3dr.services.android.lib.drone.property.Gps;
 import com.o3dr.services.android.lib.drone.property.Home;
 import com.o3dr.services.android.lib.drone.property.State;
+import com.o3dr.services.android.lib.drone.property.Type;
 import com.o3dr.services.android.lib.drone.property.VehicleMode;
 import com.o3dr.services.android.lib.util.MathUtils;
 
@@ -44,6 +45,23 @@ import java.util.List;
 public class AeroKontiki {
     static final String TAG = AeroKontiki.class.getSimpleName();
 
+    private static final ArrayList<VehicleMode> SAFE_MODES = new ArrayList<>();
+    static {
+        for(VehicleMode mode: new VehicleMode[] {
+            VehicleMode.COPTER_ALT_HOLD
+        ,   VehicleMode.COPTER_POSHOLD
+        ,   VehicleMode.COPTER_LOITER
+        ,   VehicleMode.COPTER_GUIDED
+        ,   VehicleMode.COPTER_RTL
+        ,   VehicleMode.COPTER_LAND
+        ,   VehicleMode.COPTER_BRAKE
+        ,   VehicleMode.COPTER_CIRCLE
+        ,   VehicleMode.COPTER_AUTO
+        })  {
+            SAFE_MODES.add(mode);
+        }
+    }
+
     public static final String EVENT_SPEAK = "com.aerokoniki.apps.android.event.SPEAK";
     public static final String EVENT_POINT_DROPPED = "com.aerokontiki.apps.android.event.POINT_DROPPED";
     public static final String EVENT_MISSION_SENT = "com.aerokontiki.apps.android.event.MISSION_SENT";
@@ -61,8 +79,6 @@ public class AeroKontiki {
     public static final int SERVO_HOOK_CHANNEL = 9;
     public static final int SERVO_HOOK_PWM_OPEN = 1100;
     public static final int SERVO_HOOK_PWM_CLOSE = 1900;
-
-    private static final double LEAN_OUT_METERS = 10.0;
 
     private static double sWPNavSpeedParam = 0;
 
@@ -141,6 +157,26 @@ public class AeroKontiki {
             Toast.makeText(activity, "Drone location not valid.", Toast.LENGTH_SHORT).show();
             return false;
         }
+    }
+
+    public static List<VehicleMode> safeCopterModes(int droneType, List<VehicleMode> input) {
+        final ArrayList<VehicleMode> list = new ArrayList<VehicleMode>(input.size());
+
+        if(input != null) {
+            for(VehicleMode mode: input) {
+                if(droneType == Type.TYPE_COPTER) {
+                    if(SAFE_MODES.contains(mode)) {
+                        list.add(mode);
+                    }
+                }
+                else {
+                    // Only filter out "unsafe" modes for copters. Everything else is fine/irrelevant
+                    list.add(mode);
+                }
+            }
+        }
+
+        return list;
     }
 
     public static double metersBetween(LatLong ll1, LatLong ll2) {
