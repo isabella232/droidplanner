@@ -345,7 +345,7 @@
     <string name="pref_permanent_notification_summary">Enable to make status bar notification permanent when connected.</string>
 
     <string name="zoom_fit">Zoom to Fit</string>
-    <string name="open_mission_file">Import from file</string>
+    <string name="open_mission_file">Past Missions</string>
     <string name="save_mission_file">Export to file</string>
 
     <string name="pref_ui_gps_hdop_summary">Display HDOP instead of FIX in satellite info bar item</string>
@@ -493,4 +493,7 @@
     <string name="tab_controls">Controls</string>
     <string name="tab_profiles">Profiles</string>
     <string name="tab_close">Close</string>
+    <string name="open_favorite_mission_file">My Favourites</string>
+    <string name="save_favorite_mission_file">Save as Favourite</string>
+    <string name="toast_ensure_correct_location">Ensure you are at the correct location before you fly this mission!</string>
 </resources>

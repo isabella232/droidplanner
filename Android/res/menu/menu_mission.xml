@@ -11,4 +11,17 @@
         android:icon="@drawable/ic_action_save"
         app:showAsAction="never"
         android:title="@string/save_mission_file"/>
+
+    <item
+        android:id="@+id/menu_save_favorite"
+        android:icon="@drawable/ic_action_save"
+        app:showAsAction="never"
+        android:title="@string/save_favorite_mission_file"/>
+
+    <item
+        android:id="@+id/menu_open_favorite_mission"
+        android:icon="@drawable/ic_action_folder_open"
+        app:showAsAction="never"
+        android:title="@string/open_favorite_mission_file"/>
+
 </menu>

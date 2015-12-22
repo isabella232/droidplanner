@@ -34,7 +34,6 @@ import org.droidplanner.android.maps.MarkerInfo;
 import org.droidplanner.android.proxy.mission.item.MissionItemProxy;
 import org.droidplanner.android.utils.Utils;
 import org.droidplanner.android.utils.analytics.GAUtils;
-import org.droidplanner.android.utils.collection.CircularQueue;
 import org.droidplanner.android.utils.file.IO.MissionReader;
 import org.droidplanner.android.utils.file.IO.MissionWriter;
 import org.droidplanner.android.utils.prefs.DroidPlannerPrefs;
@@ -756,6 +755,10 @@ public class MissionProxy implements DPMap.PathSource {
 
     public boolean writeMissionToFile(String filename) {
         return MissionWriter.write(generateMission(), filename);
+    }
+
+    public boolean writeFavoriteMissionToFile(String filename) {
+        return MissionWriter.writeFavorite(generateMission(), filename);
     }
 
     public boolean readMissionFromFile(MissionReader reader) {

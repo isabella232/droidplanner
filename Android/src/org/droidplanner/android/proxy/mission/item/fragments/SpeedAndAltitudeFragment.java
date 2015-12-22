@@ -139,9 +139,18 @@ public class SpeedAndAltitudeFragment extends Fragment {
             Log.v(TAG, "intent.action=" + action);
 
             switch(action) {
-                case AeroKontiki.EVENT_CONNECTED:
+                case AeroKontiki.EVENT_CONNECTED: {
+                    showView(mCancelFlightButton, false);
+                    break;
+                }
+
                 case AeroKontiki.EVENT_DISARMED: {
                     showView(mCancelFlightButton, false);
+
+                    if(mFlyingMission) {
+                        AeroKontiki.onMissionCompleted(DroidPlannerApp.get());
+                        mFlyingMission = false;
+                    }
                     break;
                 }
 
@@ -149,6 +158,9 @@ public class SpeedAndAltitudeFragment extends Fragment {
                 case AeroKontiki.EVENT_FLYING: {
                     onCloseTabs();
                     showView(mCancelFlightButton, true);
+
+                    mFlyingMission = (AeroKontiki.EVENT_FLYING.equals(action));
+
                     break;
                 }
 
@@ -278,6 +290,7 @@ public class SpeedAndAltitudeFragment extends Fragment {
     private View mSaveButton;
     private View mCloseTabsButton;
     private LaunchProfile mSelectedLaunchProfile;
+    private boolean mFlyingMission = false;
 
     private Listener mListener;
 

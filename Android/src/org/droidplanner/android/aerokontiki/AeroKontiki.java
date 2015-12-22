@@ -34,6 +34,7 @@ import org.droidplanner.android.DroidPlannerApp;
 import org.droidplanner.android.R;
 import org.droidplanner.android.proxy.mission.MissionProxy;
 import org.droidplanner.android.proxy.mission.item.MissionItemProxy;
+import org.droidplanner.android.utils.file.FileStream;
 import org.droidplanner.android.utils.prefs.DroidPlannerPrefs;
 
 import java.util.ArrayList;
@@ -96,6 +97,15 @@ public class AeroKontiki {
     public static boolean hasWPSpeedParam() { return sWPNavSpeedParam > 0; }
     public static void setWPSpeedParam(double value) { sWPNavSpeedParam = value; }
     public static double getWPSpeedParam() { return sWPNavSpeedParam; }
+
+    /** Called when a mission is successfully completed. */
+    public static void onMissionCompleted(Context context) {
+        final MissionProxy missionProxy = DroidPlannerApp.get().getMissionProxy();
+
+        if(missionProxy != null) {
+            missionProxy.writeMissionToFile(FileStream.getWaypointFilename("ak"));
+        }
+    }
 
     /**
      * Return "my" location. If the drone has a valid location, return that.

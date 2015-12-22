@@ -40,4 +40,25 @@ public class MissionWriter {
 		}
 		return true;
 	}
+
+	public static boolean writeFavorite(Mission mission, String filename) {
+		try {
+			if (!FileStream.isExternalStorageAvailable())
+				return false;
+
+			if (!filename.endsWith(FileList.WAYPOINT_FILENAME_EXT)) {
+				filename += FileList.WAYPOINT_FILENAME_EXT;
+			}
+
+			final FileOutputStream out = FileStream.getFavoriteWaypointFileStream(filename);
+			byte[] missionBytes = ParcelableUtils.marshall(mission);
+			out.write(missionBytes);
+			out.close();
+
+		} catch (Exception e) {
+			Log.e(TAG, e.getMessage(), e);
+			return false;
+		}
+		return true;
+	}
 }

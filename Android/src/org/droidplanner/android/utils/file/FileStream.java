@@ -48,6 +48,18 @@ public class FileStream {
 		return out;
 	}
 
+
+	static public FileOutputStream getFavoriteWaypointFileStream(String filename)
+		throws FileNotFoundException {
+		File dir = new File(DirectoryPath.getFavoriteWaypointsPath());
+		dir.mkdirs();
+		File file = new File(dir, filename);
+		if (file.exists())
+			file.delete();
+		FileOutputStream out = new FileOutputStream(file);
+		return out;
+	}
+
     public static String getWaypointFilename(String prefix){
         return prefix + "-" + getTimeStamp() + FileList.WAYPOINT_FILENAME_EXT;
     }

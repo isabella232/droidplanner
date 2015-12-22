@@ -42,6 +42,13 @@ public class DirectoryPath {
 	}
 
 	/**
+	 * Storage folder for favorite mission files
+	 */
+	public static String getFavoriteWaypointsPath() {
+		return getPublicDataPath() + "/Favorites/";
+	}
+
+	/**
 	 * Storage folder for user map tiles
 	 */
 	static public String getMapsPath() {
