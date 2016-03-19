@@ -104,12 +104,11 @@ public abstract class BaseFlightControlFragment extends ApiListenerFragment impl
 
                         final FollowApi api = FollowApi.getApi(drone);
                         if(api != null) {
-                            api.useExternalLocations(LocationRelay.get().isUsingExternalLocations());
                             // NOTE: This was FollowType.LEASH, but for some reason I wasn't
                             // able to select anything ELSE. It would just stop following.
                             // So now a selection from ModeFollowFragment results in the selected
                             // FollowType being updated.
-                            api.enableFollowMe(LocationRelay.get().getSelectedFollowType());
+                            api.enableFollowMe(LocationRelay.get().getSelectedFollowType(), useExternal);
                             LocationRelay.get().setDroneFollowing(true);
                         }
                         else {

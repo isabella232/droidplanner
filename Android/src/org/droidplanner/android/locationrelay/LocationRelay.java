@@ -18,6 +18,7 @@ import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
 import com.o3dr.services.android.lib.drone.property.Altitude;
 import com.o3dr.services.android.lib.drone.property.Gps;
+import com.o3dr.services.android.lib.gcs.follow.FollowLocation;
 import com.o3dr.services.android.lib.gcs.follow.FollowState;
 import com.o3dr.services.android.lib.gcs.follow.FollowType;
 
@@ -51,18 +52,16 @@ public class LocationRelay {
     ,   EXTRA_LOCATION = "location"
     ;
 
-    static Intent makeFollowApiIntent(Intent src) {
-        Intent intent = new Intent(FollowApi.EVT_EXTERNAL_LOCATION)
-                .putExtra(FollowApi.EXTRA_LAT, src.getDoubleExtra(EXTRA_LAT, 0))
-                .putExtra(FollowApi.EXTRA_LNG, src.getDoubleExtra(EXTRA_LNG, 0))
-                .putExtra(FollowApi.EXTRA_ALTITUDE, src.getDoubleExtra(EXTRA_ALTITUDE, 0))
-                .putExtra(FollowApi.EXTRA_HEADING, src.getFloatExtra(EXTRA_HEADING, 0))
-                .putExtra(FollowApi.EXTRA_SPEED, src.getFloatExtra(EXTRA_SPEED, 0))
-                .putExtra(FollowApi.EXTRA_ACCURACY, src.getFloatExtra(EXTRA_ACCURACY, 10))
-                .putExtra(FollowApi.EXTRA_TIME, src.getLongExtra(EXTRA_TIME, System.currentTimeMillis()))
-                ;
-
-        return intent;
+    static FollowLocation makeFollowLocation(Intent src) {
+        return new FollowLocation.Builder()
+                .lat(src.getDoubleExtra(EXTRA_LAT, -1))
+                .lng(src.getDoubleExtra(EXTRA_LNG, -1))
+                .altitude(src.getDoubleExtra(EXTRA_ALTITUDE, -1))
+                .heading(src.getFloatExtra(EXTRA_HEADING, -1))
+                .speed(src.getFloatExtra(EXTRA_SPEED, 0))
+                .accuracy(src.getFloatExtra(EXTRA_ACCURACY, 0))
+                .time(src.getLongExtra(EXTRA_TIME, 0))
+            .build();
     }
 
     public static void init(Context context) {
@@ -99,9 +98,18 @@ public class LocationRelay {
                 case EVT_TARGET_LOCATION_UPDATED: {
                     if(isDroneFollowing() && mUseExternalLocations) {
                         // Bounce this location to the Follow API
-                        Intent bounce = makeFollowApiIntent(intent);
-                        if(bounce != null) {
-                            mContext.sendBroadcast(bounce);
+                        FollowLocation loc = makeFollowLocation(intent);
+                        if(loc != null) {
+                            FollowApi api = FollowApi.getApi(getDrone());
+                            if(api != null) {
+                                api.onNewLocation(loc);
+                            }
+                            else {
+                                Log.w(TAG, "No FollowApi from drone");
+                            }
+                        }
+                        else {
+                            Log.w(TAG, "No location made from intent");
                         }
 
                         // Broadcast this event internally, in case the map wants to draw
@@ -241,11 +249,6 @@ public class LocationRelay {
         FollowApi api = FollowApi.getApi(getDrone());
 
         if(mUseExternalLocations != use) {
-            if(api != null) {
-                Log.v(TAG, "Telling FollowApi use locations: " + use);
-                api.useExternalLocations(use);
-            }
-
             if(mUseExternalLocations) {
                 // turn it off
             }
