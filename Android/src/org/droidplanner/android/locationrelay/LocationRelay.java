@@ -13,11 +13,13 @@ import android.util.Log;
 
 import com.o3dr.android.client.Drone;
 import com.o3dr.android.client.apis.FollowApi;
+import com.o3dr.android.client.apis.VehicleApi;
 import com.o3dr.services.android.lib.coordinate.LatLong;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
 import com.o3dr.services.android.lib.drone.property.Altitude;
 import com.o3dr.services.android.lib.drone.property.Gps;
+import com.o3dr.services.android.lib.drone.property.VehicleMode;
 import com.o3dr.services.android.lib.gcs.follow.FollowLocation;
 import com.o3dr.services.android.lib.gcs.follow.FollowState;
 import com.o3dr.services.android.lib.gcs.follow.FollowType;
@@ -36,6 +38,9 @@ public class LocationRelay {
     public static final String EVT_BASE = "org.droidplanner.android.locationrelay";
     public static final String EVT_DRONE_LOCATION_UPDATED = EVT_BASE + ".DRONE_LOCATION_UPDATED";
     public static final String EVT_TARGET_LOCATION_UPDATED = EVT_BASE + ".TARGET_LOCATION_UPDATED";
+    public static final String EVT_FOLLOW_TARGET_STOPPED = EVT_BASE + ".FOLLOW_TARGET_STOPPED";
+    public static final String EXTRA_USER = "user";
+
 
     // Internal events
     public static final String EVT_INTERNAL_TARGET_LOCATION = EVT_BASE + ".INTERNAL_TARGET_LOCATION";
@@ -119,6 +124,15 @@ public class LocationRelay {
                         if(location != null) {
                             sendInternalTargetLocationUpdate(location);
                         }
+                    }
+
+                    break;
+                }
+
+                case EVT_FOLLOW_TARGET_STOPPED: {
+                    if(isDroneFollowing()) {
+                        // Oops, drone is following a user who just disappered. Come home.
+                        VehicleApi.getApi(drone).setVehicleMode(VehicleMode.COPTER_RTL);
                     }
 
                     break;

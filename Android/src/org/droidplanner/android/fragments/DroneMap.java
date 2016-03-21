@@ -101,7 +101,8 @@ public abstract class DroneMap extends ApiListenerFragment {
 					break;
 				}
 
-                case LocationRelay.EVT_FOLLOW_STOPPED: {
+                case LocationRelay.EVT_FOLLOW_STOPPED:
+				case LocationRelay.EVT_FOLLOW_TARGET_STOPPED: {
                     graphicTarget.setPosition(null);
 					List<MarkerInfo> list = new ArrayList<MarkerInfo>(1);
 					list.add(graphicTarget);
