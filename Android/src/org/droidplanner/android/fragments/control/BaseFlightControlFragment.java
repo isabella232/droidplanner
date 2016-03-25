@@ -3,8 +3,11 @@ package org.droidplanner.android.fragments.control;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Handler;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
@@ -12,13 +15,22 @@ import android.widget.Toast;
 import com.google.android.gms.location.LocationRequest;
 import com.o3dr.android.client.Drone;
 import com.o3dr.android.client.apis.FollowApi;
+import com.o3dr.android.client.apis.solo.SoloMessageApi;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
+import com.o3dr.services.android.lib.drone.companion.solo.tlv.SoloFollowOptionsV2;
+import com.o3dr.services.android.lib.drone.companion.solo.tlv.SoloMessageShot;
+import com.o3dr.services.android.lib.drone.companion.solo.tlv.SoloMessageShotSetter;
 import com.o3dr.services.android.lib.gcs.follow.FollowState;
+import com.o3dr.services.android.lib.gcs.follow.FollowType;
+import com.o3dr.services.android.lib.model.AbstractCommandListener;
 
+import org.droidplanner.android.DroidPlannerApp;
+import org.droidplanner.android.R;
 import org.droidplanner.android.fragments.SettingsFragment;
 import org.droidplanner.android.fragments.helpers.ApiListenerFragment;
 import org.droidplanner.android.locationrelay.LocationRelay;
 import org.droidplanner.android.utils.location.CheckLocationSettings;
+import org.droidplanner.android.view.followType.FollowTypeSelectorView;
 
 /**
  * Created by Fredia Huya-Kouadio on 5/25/15.
@@ -61,6 +73,8 @@ public abstract class BaseFlightControlFragment extends ApiListenerFragment impl
         }
     };
 
+    private final Handler mHandler = new Handler();
+
     @Override
     public void onApiConnected(){
         getBroadcastManager().registerReceiver(receiver, filter);
@@ -73,15 +87,15 @@ public abstract class BaseFlightControlFragment extends ApiListenerFragment impl
 
     protected void toggleFollowMe() {
         final Drone drone = getDrone();
-        if (drone == null)
-            return;
 
-        final FollowState followState = drone.getAttribute(AttributeType.FOLLOW_STATE);
-        if (followState.isEnabled()) {
-            FollowApi.getApi(drone).disableFollowMe();
-            LocationRelay.get().setDroneFollowing(false);
-        } else {
-            enableFollowMe(drone);
+        if(drone != null) {
+            final FollowState followState = drone.getAttribute(AttributeType.FOLLOW_STATE);
+            if (followState.isEnabled()) {
+                FollowApi.getApi(drone).disableFollowMe();
+                LocationRelay.get().setDroneFollowing(false);
+            } else {
+                enableFollowMe(drone);
+            }
         }
     }
 
@@ -104,12 +118,7 @@ public abstract class BaseFlightControlFragment extends ApiListenerFragment impl
 
                         final FollowApi api = FollowApi.getApi(drone);
                         if(api != null) {
-                            // NOTE: This was FollowType.LEASH, but for some reason I wasn't
-                            // able to select anything ELSE. It would just stop following.
-                            // So now a selection from ModeFollowFragment results in the selected
-                            // FollowType being updated.
-                            api.enableFollowMe(LocationRelay.get().getSelectedFollowType(), useExternal);
-                            LocationRelay.get().setDroneFollowing(true);
+                            showFollowSelectDialog(drone, api, useExternal);
                         }
                         else {
                             Log.w(TAG, "No Follow API");
@@ -118,5 +127,88 @@ public abstract class BaseFlightControlFragment extends ApiListenerFragment impl
                 });
 
         locationSettingsChecker.check();
+    }
+
+    void showFollowSelectDialog(final Drone drone, final FollowApi followApi, final boolean useExternal) {
+        final FollowTypeSelectorView view = new FollowTypeSelectorView(getActivity(), drone)
+                .setFollowType(LocationRelay.get().getSelectedFollowType())
+                ;
+
+        final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity())
+                .setTitle(R.string.dlg_follow_select_title)
+                .setView(view)
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        final FollowType followType = view.getFollowType();
+
+                        LocationRelay.get().setSelectedFollowType(followType);
+
+                        if(followType == FollowType.SOLO_SHOT) {
+                            final SoloMessageApi msgApi = SoloMessageApi.getApi(drone);
+                            final SoloMessageShotSetter setter = new SoloMessageShotSetter(SoloMessageShot.SHOT_FOLLOW);
+
+                            msgApi.sendMessage(setter, new AbstractCommandListener() {
+                                @Override
+                                public void onSuccess() {
+                                    final SoloFollowOptionsV2 options = new SoloFollowOptionsV2();
+                                    options.setFreeLook(false);
+                                    options.setLookAt(false);
+                                    options.setCruiseSpeed(0f);
+
+                                    // Got everything set. Now fire off the "start follow" message.
+                                    startFollowMe(followApi, followType, useExternal);
+
+                                    mHandler.postDelayed(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            msgApi.sendMessage(options, new AbstractCommandListener() {
+                                                @Override
+                                                public void onSuccess() {
+                                                    Log.v(TAG, "Solo set options success");
+                                                }
+
+                                                @Override
+                                                public void onError(int i) {
+                                                    showError(String.format("Solo set options error: %d", i));
+                                                }
+
+                                                @Override
+                                                public void onTimeout() {
+                                                    showError("Solo set options timeout");
+                                                }
+                                            });
+                                        }
+                                    }, 600);
+                                }
+
+                                @Override
+                                public void onError(int i) {
+                                    showError(String.format("Set Solo shot error: %d", i));
+                                }
+
+                                @Override
+                                public void onTimeout() {
+                                    showError("Timed out setting Solo shot.");
+                                }
+                            });
+                        }
+                        else {
+                            startFollowMe(followApi, followType, useExternal);
+                        }
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null);
+
+        builder.create().show();
+    }
+
+    void startFollowMe(FollowApi api, FollowType type, boolean useExternal) {
+        api.enableFollowMe(type, useExternal);
+        LocationRelay.get().setDroneFollowing(true);
+    }
+
+    void showError(String err) {
+        Toast.makeText(DroidPlannerApp.get(), err, Toast.LENGTH_SHORT).show();
     }
 }

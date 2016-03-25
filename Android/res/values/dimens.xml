@@ -58,4 +58,8 @@
     <dimen name="dialog_uvc_button_size">48dp</dimen>
     <dimen name="list_item_uvc_font_size">18sp</dimen>
     <dimen name="list_item_uvc_height_min">32dp</dimen>
+
+    <dimen name="padding_small">4dip</dimen>
+    <dimen name="padding_medium">8dip</dimen>
+    <dimen name="padding_large">16dip</dimen>
 </resources>

@@ -593,5 +593,12 @@
     <string name="pref_broadcast_drone_loc_title">Broadcast Drone Location</string>
     <string name="pref_broadcast_drone_loc_summary">Broadcast drone location updates for use by other apps</string>
 
+    <!-- Follow mode dialog -->
+    <string name="dlg_follow_select_title">Select Follow Type</string>
+    <string name="txt_follow_type">Follow type</string>
+    <string name="rdo_lookAtMe">Look at me</string>
+    <string name="rdo_followMe">Follow</string>
+    <string name="chk_freeLook">Free look</string>
+    <string name="txt_solo_follow_options">Solo Follow options:</string>
 
 </resources>

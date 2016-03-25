@@ -5,26 +5,35 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.o3dr.android.client.Drone;
 import com.o3dr.android.client.apis.FollowApi;
+import com.o3dr.android.client.apis.solo.SoloMessageApi;
 import com.o3dr.services.android.lib.coordinate.LatLong;
 import com.o3dr.services.android.lib.coordinate.LatLongAlt;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
+import com.o3dr.services.android.lib.drone.companion.solo.tlv.SoloFollowOptionsV2;
 import com.o3dr.services.android.lib.gcs.follow.FollowState;
 import com.o3dr.services.android.lib.gcs.follow.FollowType;
+import com.o3dr.services.android.lib.model.AbstractCommandListener;
 
 import org.beyene.sius.unit.length.LengthUnit;
+import org.droidplanner.android.DroidPlannerApp;
 import org.droidplanner.android.R;
 import org.droidplanner.android.fragments.DroneMap;
 import org.droidplanner.android.graphic.map.GuidedScanROIMarkerInfo;
@@ -36,7 +45,11 @@ import org.droidplanner.android.utils.unit.providers.length.LengthUnitProvider;
 import org.droidplanner.android.view.spinnerWheel.CardWheelHorizontalView;
 import org.droidplanner.android.view.spinnerWheel.adapters.LengthWheelAdapter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ModeFollowFragment extends ModeGuidedFragment implements OnItemSelectedListener, DroneMap.MapMarkerProvider {
+    static final String TAG = ModeFollowFragment.class.getSimpleName();
 
     private static final double DEFAULT_MIN_RADIUS = 2; //meters
 
@@ -51,8 +64,12 @@ public class ModeFollowFragment extends ModeGuidedFragment implements OnItemSele
             if (AttributeEvent.FOLLOW_UPDATE.equals(action)) {
                 final FollowState followState = getDrone().getAttribute(AttributeType.FOLLOW_STATE);
                 if (followState != null) {
+                    spinner.setOnItemSelectedListener(null);
+
                     final FollowType followType = followState.getMode();
                     spinner.setSelection(adapter.getPosition(followType));
+
+                    spinner.setOnItemSelectedListener(ModeFollowFragment.this);
                     onFollowTypeUpdate(followType, followState.getParams());
                 }
             }
@@ -70,6 +87,10 @@ public class ModeFollowFragment extends ModeGuidedFragment implements OnItemSele
 
     private TextView modeDescription;
     private Spinner spinner;
+    private CheckBox mFreeLookCheck;
+    private View mSoloOptionsView;
+    private final SoloFollowOptionsV2 mSoloOptions = new SoloFollowOptionsV2();
+
     private ArrayAdapter<FollowType> adapter;
 
     private CardWheelHorizontalView<LengthUnit> mRadiusWheel;
@@ -83,6 +104,9 @@ public class ModeFollowFragment extends ModeGuidedFragment implements OnItemSele
     @Override
     public void onViewCreated(View parentView, Bundle savedInstanceState) {
         super.onViewCreated(parentView, savedInstanceState);
+
+        mSoloOptionsView = parentView.findViewById(R.id.layout_soloOptions);
+        mFreeLookCheck = (CheckBox)parentView.findViewById(R.id.chk_freeLook);
 
         modeDescription = (TextView) parentView.findViewById(R.id.ModeDetail);
 
@@ -106,9 +130,30 @@ public class ModeFollowFragment extends ModeGuidedFragment implements OnItemSele
         roiHeightWheel.addScrollListener(this);
 
         spinner = (Spinner) parentView.findViewById(R.id.follow_type_spinner);
-        adapter = new FollowTypesAdapter(context, false);
+        adapter = new FollowTypesAdapter(context, getFollowTypes(context, true));
         spinner.setAdapter(adapter);
         spinner.setOnItemSelectedListener(this);
+
+        RadioGroup grp = (RadioGroup)parentView.findViewById(R.id.grp_followTypeMode);
+        grp.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                mSoloOptions.setLookAt(checkedId == R.id.rdo_lookAtMe);
+                mSoloOptions.setCruiseSpeed(0f);
+                mFreeLookCheck.setEnabled(checkedId == R.id.rdo_followMe);
+                sendOptions(mSoloOptions);
+            }
+        });
+
+        mFreeLookCheck.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                mSoloOptions.setFreeLook(isChecked);
+                sendOptions(mSoloOptions);
+            }
+        });
+
+        ((RadioButton)parentView.findViewById(R.id.rdo_lookAtMe)).setChecked(true);
     }
 
     @Override
@@ -167,6 +212,8 @@ public class ModeFollowFragment extends ModeGuidedFragment implements OnItemSele
                 roiHeight = ((LatLongAlt) roiTarget).getAltitude();
         }
 
+        mSoloOptionsView.setVisibility((followType == FollowType.SOLO_SHOT)? View.VISIBLE: View.GONE);
+
         roiHeightWheel.setCurrentValue(getLengthUnitProvider().boxBaseValueToTarget(roiHeight));
         updateROITargetMarker(roiTarget);
     }
@@ -224,16 +271,21 @@ public class ModeFollowFragment extends ModeGuidedFragment implements OnItemSele
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
         final FollowType type = adapter.getItem(position);
-
         LocationRelay.get().setSelectedFollowType(type);
 
-        final Drone drone = getDrone();
-        if (drone.isConnected()) {
-            FollowApi api = FollowApi.getApi(drone);
-            if(api != null) {
-                api.enableFollowMe(type, LocationRelay.get().isUsingExternalLocations());
-            }
-        }
+        // TODO: Not sure how this EVER worked. It causes the drone to select a follow mode,
+        // which triggers a callback which sets selection HERE, which causes the drone to
+        // select a follow mode, no end to it.
+//        final Drone drone = getDrone();
+//        if (drone.isConnected()) {
+//            FollowApi api = FollowApi.getApi(drone);
+//            if(api != null) {
+//                api.disableFollowMe();
+//                api.enableFollowMe(type, LocationRelay.get().isUsingExternalLocations());
+//            }
+//        }
+
+        showSoloOptions(type == FollowType.SOLO_SHOT);
     }
 
     @Override
@@ -289,8 +341,8 @@ public class ModeFollowFragment extends ModeGuidedFragment implements OnItemSele
 
         private final LayoutInflater inflater;
 
-        public FollowTypesAdapter(Context context, boolean isAdvancedMenuEnabled) {
-            super(context, 0, FollowType.getFollowTypes(isAdvancedMenuEnabled));
+        public FollowTypesAdapter(Context context, List<FollowType> types) {
+            super(context, 0, types);
             inflater = LayoutInflater.from(context);
         }
 
@@ -312,5 +364,50 @@ public class ModeFollowFragment extends ModeGuidedFragment implements OnItemSele
         public View getDropDownView(int position, View convertView, ViewGroup parent) {
             return getView(position, convertView, parent);
         }
+    }
+
+    void showSoloOptions(boolean show) {
+        mSoloOptionsView.setVisibility((show) ? View.VISIBLE : View.GONE);
+    }
+
+    List<FollowType> getFollowTypes(Context context, boolean includeAdvanced) {
+        final ArrayList<FollowType> list = new ArrayList<FollowType>(FollowType.getFollowTypes(includeAdvanced));
+
+        SoloMessageApi api = SoloMessageApi.getApi(getDrone());
+        if(api != null) {
+            list.add(FollowType.SOLO_SHOT);
+        }
+
+        return list;
+    }
+
+    void sendOptions(SoloFollowOptionsV2 options) {
+        SoloMessageApi api = SoloMessageApi.getApi(getDrone());
+
+        if(api != null) {
+            api.sendMessage(options, new AbstractCommandListener() {
+                @Override
+                public void onSuccess() {
+                    Log.v(TAG, "Solo send options success");
+                }
+
+                @Override
+                public void onError(int i) {
+                    showError(String.format("Error setting options: %d", i));
+                }
+
+                @Override
+                public void onTimeout() {
+                    showError("Timeout settings options");
+                }
+            });
+        }
+        else {
+            showError("No SoloMessageApi!");
+        }
+    }
+
+    void showError(String err) {
+        Toast.makeText(DroidPlannerApp.get(), err, Toast.LENGTH_SHORT).show();
     }
 }

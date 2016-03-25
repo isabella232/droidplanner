@@ -214,10 +214,16 @@ public class LocationRelay {
     public FollowType getSelectedFollowType() {
         FollowType type = FollowType.LEASH;
         int pref = DroidPlannerApp.get().getAppPreferences().getLastFollowMode();
-        for(FollowType t: FollowType.values()) {
-            if(t.ordinal() == pref) {
-                type = t;
-                break;
+
+        if(pref == FollowType.SOLO_SHOT.ordinal()) {
+            type = FollowType.SOLO_SHOT;
+        }
+        else {
+            for(FollowType t: FollowType.values()) {
+                if(t.ordinal() == pref) {
+                    type = t;
+                    break;
+                }
             }
         }
 
