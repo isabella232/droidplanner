@@ -21,7 +21,7 @@ dependencies {
 //    compile 'com.o3dr.android:dronekit-android:2.8.0'
 
     // Custom dronekit-android
-    compile(name:"dronekit-android.2.8.0", ext:"aar")
+    compile(name:"dronekit-android.2.8.1", ext:"aar")
 
     compile 'me.grantland:autofittextview:0.2.1'
     compile(name:'shimmer-android-release', ext:'aar')
